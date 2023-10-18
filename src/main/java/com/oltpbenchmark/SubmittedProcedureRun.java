@@ -25,18 +25,18 @@ import java.util.List;
  *
  * @author breilly
  */
-public class SubmittedProcedure {
+public class SubmittedProcedureRun {
     private final int type;
     private final long startTime;
-    private final List<Object> procedureArguments;
+    private final List<Object> runArgs;
 
-    SubmittedProcedure(int type) {
+    SubmittedProcedureRun(int type) {
         this(type, null);
     }
 
-    SubmittedProcedure(int type, List<Object> procedureArguments) {
+    SubmittedProcedureRun(int type, List<Object> runArgs) {
         this.type = type;
-        this.procedureArguments = procedureArguments;
+        this.runArgs = runArgs;
         this.startTime = System.nanoTime();
     }
 
@@ -48,7 +48,7 @@ public class SubmittedProcedure {
         return startTime;
     }
 
-    public List<Object> getProcedureArguments() {
-        return procedureArguments;
+    public List<Object> getRunArgs() {
+        return runArgs;
     }
 }

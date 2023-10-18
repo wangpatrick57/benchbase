@@ -16,9 +16,9 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> runArgs) throws UserAbortException, SQLException {
         DynamicProcedure proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
-        proc.run(conn, procedureArguments);
+        proc.run(conn, runArgs);
         return (TransactionStatus.SUCCESS);
     }
 }

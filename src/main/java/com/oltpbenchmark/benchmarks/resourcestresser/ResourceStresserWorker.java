@@ -65,7 +65,7 @@ public class ResourceStresserWorker extends Worker<ResourceStresserBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> runArgs) throws UserAbortException, SQLException {
         if (nextTrans.getProcedureClass().equals(CPU1.class)) {
             cpu1Transaction(conn, CPU1_howManyPerTrasaction, CPU1_sleep, CPU1_nestedLevel);
         } else if (nextTrans.getProcedureClass().equals(CPU2.class)) {

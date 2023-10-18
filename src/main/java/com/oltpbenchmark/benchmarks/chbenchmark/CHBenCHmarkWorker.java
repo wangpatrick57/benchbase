@@ -33,7 +33,7 @@ public class CHBenCHmarkWorker extends Worker<CHBenCHmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> runArgs) throws UserAbortException, SQLException {
         try {
             GenericQuery proc = (GenericQuery) this.getProcedure(nextTransaction.getProcedureClass());
             proc.run(conn);

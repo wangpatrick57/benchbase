@@ -39,7 +39,7 @@ public class VoterWorker extends Worker<VoterBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType txnType, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType txnType, List<Object> runArgs) throws UserAbortException, SQLException {
 
         PhoneCall call = switchboard.receive();
         Vote proc = getProcedure(Vote.class);

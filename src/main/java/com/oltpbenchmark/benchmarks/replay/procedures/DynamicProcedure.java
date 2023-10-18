@@ -34,8 +34,8 @@ import com.oltpbenchmark.api.Procedure;
  * multi-statement transactions.
  */
 public class DynamicProcedure extends Procedure {
-    public void run(Connection conn, List<Object> procedureArguments) throws SQLException {
-        List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(procedureArguments);
+    public void run(Connection conn, List<Object> runArgs) throws SQLException {
+        List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
         for (SQLStmt sqlStmt : sqlStmts) {
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
             preparedStatement.execute();
@@ -43,7 +43,7 @@ public class DynamicProcedure extends Procedure {
         }
     }
 
-    private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> procedureArguments) {
-        return procedureArguments.stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
+    private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
+        return runArgs.stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
     }
 }

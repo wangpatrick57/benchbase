@@ -101,7 +101,7 @@ public class SmallBankWorker extends Worker<SmallBankBenchmark> {
 
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType txnType, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType txnType, List<Object> runArgs) throws UserAbortException, SQLException {
         Class<? extends Procedure> procClass = txnType.getProcedureClass();
 
         // Amalgamate

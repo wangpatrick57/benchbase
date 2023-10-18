@@ -48,7 +48,7 @@ public class EpinionsWorker extends Worker<EpinionsBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> runArgs) throws UserAbortException, SQLException {
         if (nextTrans.getProcedureClass().equals(GetReviewItemById.class)) {
             reviewItemByID(conn);
         } else if (nextTrans.getProcedureClass().equals(GetReviewsByUser.class)) {

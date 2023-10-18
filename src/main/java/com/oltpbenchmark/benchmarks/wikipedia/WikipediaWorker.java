@@ -52,7 +52,7 @@ public class WikipediaWorker extends Worker<WikipediaBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> runArgs) throws UserAbortException, SQLException {
         Flat z_users = new Flat(this.rng(), 1, this.getBenchmark().num_users);
         Zipf z_pages = new Zipf(this.rng(), 1, this.getBenchmark().num_pages, WikipediaConstants.USER_ID_SIGMA);
 

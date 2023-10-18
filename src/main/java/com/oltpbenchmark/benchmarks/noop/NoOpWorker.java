@@ -43,7 +43,7 @@ public class NoOpWorker extends Worker<NoOpBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> procedureArguments) throws UserAbortException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> runArgs) throws UserAbortException {
 
         LOG.debug("Executing {}", this.procNoOp);
         try {

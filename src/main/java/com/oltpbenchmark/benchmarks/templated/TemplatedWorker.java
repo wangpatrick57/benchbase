@@ -41,7 +41,7 @@ public class TemplatedWorker extends Worker<TemplatedBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> procedureArguments)
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> runArgs)
             throws UserAbortException, SQLException {
         try {
             Class<? extends Procedure> clazz = nextTransaction.getProcedureClass();

@@ -116,11 +116,11 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
 
         // CORE CODE: demos passing a sql statement
-        List<SubmittedProcedure> submittedProcedures = new ArrayList<SubmittedProcedure>();
+        List<SubmittedProcedureRun> submittedProcedureRuns = new ArrayList<SubmittedProcedureRun>();
         List<Object> sqlStmts = new ArrayList<Object>();
         sqlStmts.add(new SQLStmt("SELECT * FROM customer LIMIT 10;"));
-        submittedProcedures.add(new SubmittedProcedure(1, sqlStmts));
-        workState.addToQueue(submittedProcedures);
+        submittedProcedureRuns.add(new SubmittedProcedureRun(1, sqlStmts));
+        workState.addToQueue(submittedProcedureRuns);
         // END CORE CODE
 
 

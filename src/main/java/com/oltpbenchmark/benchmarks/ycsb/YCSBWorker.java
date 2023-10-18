@@ -81,7 +81,7 @@ class YCSBWorker extends Worker<YCSBBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> procedureArguments) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, List<Object> runArgs) throws UserAbortException, SQLException {
         Class<? extends Procedure> procClass = nextTrans.getProcedureClass();
 
         if (procClass.equals(DeleteRecord.class)) {
