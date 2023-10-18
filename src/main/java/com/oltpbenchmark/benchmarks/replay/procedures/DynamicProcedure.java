@@ -39,7 +39,7 @@ public class DynamicProcedure extends Procedure {
         for (SQLStmt sqlStmt : sqlStmts) {
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
             preparedStatement.execute();
-            System.out.printf("executed %s\n", sqlStmt.toString());
+            System.out.printf("DynamicProcedure.run() executed %s\n", sqlStmt.toString());
         }
     }
 
