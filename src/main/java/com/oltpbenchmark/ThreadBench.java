@@ -51,8 +51,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
     public static Results runRateLimitedBenchmark(List<Worker<? extends BenchmarkModule>> workers,
             List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
         ThreadBench bench = new ThreadBench(workers, workConfs, intervalMonitoring);
-        // return bench.runRateLimitedMultiPhase();
-        return bench.runReplayBenchmark();
+        return bench.runRateLimitedMultiPhase();
+        // return bench.runReplayBenchmark();
     }
 
     private void createWorkerThreads() {

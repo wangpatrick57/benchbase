@@ -25,7 +25,7 @@ import java.util.Random;
 
 public class Phase {
     public enum Arrival {
-        REGULAR, POISSON,
+        REGULAR, POISSON, REPLAY
     }
 
     private final Random gen = new Random();

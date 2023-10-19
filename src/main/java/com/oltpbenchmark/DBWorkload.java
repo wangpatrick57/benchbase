@@ -18,10 +18,12 @@
 
 package com.oltpbenchmark;
 
+import com.oltpbenchmark.Phase.Arrival;
 import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.TransactionTypes;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.benchmarks.replay.ReplayBenchmark;
 import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.*;
 import org.apache.commons.cli.*;
@@ -365,6 +367,17 @@ public class DBWorkload {
 
 
                 wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, timed, activeTerminals, arrival);
+            }
+
+            // Manage phases for "replay" workloads
+            if (bench.getClass() == ReplayBenchmark.class) {
+                // Make sure the user didn't set phases manually
+                if (wrkld.getPhases().size() != 0) {
+                    LOG.error("Do not set phases in the *_config.xml file manually for \"replay\" benchmarks. Phases will be set automatically.");
+                }
+
+                // Set phases automatically
+                wrkld.addPhase(0, 0, 0, 0, new ArrayList<>(0), true, false, false, false, terminals, Arrival.REPLAY);
             }
 
             // CHECKING INPUT PHASES

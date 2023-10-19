@@ -11,5 +11,8 @@
     <batchsize>128</batchsize>
 
     <!-- The workload -->
+    <!-- Terminals controls the # of workers. Increase this if the system cannot keep up with the replay file -->
+    <terminals>2</terminals>
+    <!-- Do not add any phases in the config file -->
     
 </parameters>
