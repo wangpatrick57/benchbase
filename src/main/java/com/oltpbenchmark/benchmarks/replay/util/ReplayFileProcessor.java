@@ -6,6 +6,12 @@ import java.util.List;
 import com.oltpbenchmark.api.SQLStmt;
 
 public class ReplayFileProcessor {
+    private int timesHasNextTransactionCalled;
+
+    public ReplayFileProcessor() {
+        this.timesHasNextTransactionCalled = 0;
+    }
+
     /**
      * @brief Gets "ready" transactions which haven't been returned yet.
      * 
@@ -44,6 +50,6 @@ public class ReplayFileProcessor {
      * @return Whether there is another transaction
      */
     public boolean hasNextTransaction() {
-        return true;
+        return !(this.timesHasNextTransactionCalled++ > 100);
     }
 }

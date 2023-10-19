@@ -7,7 +7,7 @@ import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.Loader;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.benchmarks.replay.procedures.GenericQuery;
+import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
 
 public class ReplayBenchmark extends BenchmarkModule {
     public ReplayBenchmark(WorkloadConfiguration workConf) {
@@ -16,12 +16,17 @@ public class ReplayBenchmark extends BenchmarkModule {
 
     @Override
     protected Package getProcedurePackageImpl() {
-        return (GenericQuery.class.getPackage());
+        return (DynamicProcedure.class.getPackage());
     }
 
     @Override
     protected List<Worker<? extends BenchmarkModule>> makeWorkersImpl() {
-        return new ArrayList<Worker<? extends BenchmarkModule>>();
+        List<Worker<? extends BenchmarkModule>> workers = new ArrayList<>();
+        int workerID = 0;
+        for (int i = 0; i < this.workConf.getTerminals(); i++) {
+            workers.add(new ReplayWorker(this, workerID++));
+        }
+        return workers;
     }
 
     @Override

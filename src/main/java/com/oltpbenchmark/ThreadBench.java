@@ -108,23 +108,25 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
     private Results runReplayBenchmark() {
         // IGNORE THIS: boilerplate to set up a phase
         WorkloadConfiguration workConf = this.workConfs.get(0);
-        workConf.addPhase(0, 0, 0, 0, new ArrayList<Double>(), true, false, false, false, 0, Arrival.REGULAR);
         workConf.initializeState(testState);
         WorkloadState workState = workConf.getWorkloadState();
         this.createWorkerThreads();
-        workState.switchToNextPhase(); // switch to the phase we just added
-        // END IGNORE THIS
-
-        ReplayFileProcessor replayFileProcessor = new ReplayFileProcessor();
-        
-        while (replayFileProcessor.hasNextTransaction()) {
-            workState.addToQueue(1, false);
-        }
-
-        // IGNORE THIS: boilerplate to return a random results object
+        workState.switchToNextPhase();
         long start = System.nanoTime();
         long measureEnd = -1;
         testState.blockForStart();
+        // END IGNORE THIS
+
+        ReplayFileProcessor replayFileProcessor = new ReplayFileProcessor();
+
+        while (replayFileProcessor.hasNextTransaction()) {
+            long nextInterval = replayFileProcessor.getNextReadyTimestamp();
+            sleepUntil(nextInterval);
+            List<List<SQLStmt>> transactions = replayFileProcessor.getNextReadyTransactions();
+            workState.addToQueue(transactions.size(), false); // this is just temporary
+        }
+
+        // IGNORE THIS: boilerplate to return a random results object
         int[] latencies = {1, 2, 3, 4, 5};
         int measuredRequests = 5;
         DistributionStatistics stats = DistributionStatistics.computeStatistics(latencies);

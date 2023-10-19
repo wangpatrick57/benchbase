@@ -13,6 +13,19 @@
     <!-- The workload -->
     <!-- Terminals controls the # of workers. Increase this if the system cannot keep up with the replay file -->
     <terminals>2</terminals>
-    <!-- Do not add any phases in the config file -->
+    <works>
+        <work>
+            <time>1</time>
+            <rate>1</rate>
+            <weights>1</weights>
+        </work>
+    </works>
+
+    <!-- Transaction types -->
+    <transactiontypes>
+        <transactiontype>
+            <name>DynamicProcedure</name>
+        </transactiontype>
+    </transactiontypes>
     
 </parameters>
