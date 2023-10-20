@@ -240,7 +240,6 @@ public class Phase {
                 } else {
                     runArgs = Optional.of(new ArrayList<Object>());
                     runArgs.get().add(replayTransactionOpt.get());
-                    System.out.println("calling pop() from generateSubmittedProcedure()");
                     this.replayFileQueue.pop();
                 }
             }

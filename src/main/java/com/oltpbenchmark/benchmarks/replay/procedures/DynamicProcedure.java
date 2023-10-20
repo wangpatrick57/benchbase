@@ -34,16 +34,15 @@
   * multi-statement transactions.
   */
  public class DynamicProcedure extends Procedure {
-     public void run(Connection conn, List<Object> runArgs) throws SQLException {
-        System.out.println("DynamicProcedure.run() called");
+    public void run(Connection conn, List<Object> runArgs) throws SQLException {
         List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
         for (SQLStmt sqlStmt : sqlStmts) {
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
             preparedStatement.execute();
         }
-     }
+    }
 
-     private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
-         return runArgs.stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
-     }
+    private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
+        return runArgs.stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
+    }
  }

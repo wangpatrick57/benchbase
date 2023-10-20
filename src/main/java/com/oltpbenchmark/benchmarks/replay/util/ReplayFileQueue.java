@@ -9,6 +9,9 @@ import java.util.Random;
 
 import com.oltpbenchmark.api.SQLStmt;
 
+/**
+ * TODO: maybe make this extend queue?
+ */
 public class ReplayFileQueue {
     private Queue<ReplayTransaction> queue;
 
@@ -23,8 +26,8 @@ public class ReplayFileQueue {
         queue = new LinkedList<>();
         long start = System.nanoTime();
 
-        for (int i = 0; i < 100; i++) {
-            queue.add(new ReplayTransaction(generateRandomList(), start + 1000000000 * i));
+        for (long i = 0; i < 100; i++) {
+            queue.add(new ReplayTransaction(generateRandomList(), start + 100000000 * i));
         }
     }
 
@@ -63,7 +66,6 @@ public class ReplayFileQueue {
      * Will block until there are buffered transactions or the end of the file is reached.
      */
     public void pop() {
-        System.out.println("entering pop(). queue size is " + Integer.toString(this.queue.size()));
         synchronized (this) {
             this.queue.remove();
         }

@@ -161,7 +161,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
         // Main Loop
         while (true) {
-            System.out.println("start of // Main Loop");
             // posting new work... and resetting the queue in case we have new
             // portion of the workload...
 
@@ -171,7 +170,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                 } else {
                     rateFactor = 1;
                 }
-                System.out.println("addToQueue called");
                 workState.addToQueue(nextToAdd * rateFactor, resetQueues);
             }
             resetQueues = false;
@@ -194,7 +192,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                 diff = nextInterval - now;
             }
 
-            System.out.println("computing phaseComplete");
             boolean phaseComplete = false;
             if (phase != null) {
                 if (phase.isLatencyRun())
@@ -232,7 +229,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                             if (phase == null && !lastEntry) {
                                 // Last phase
                                 lastEntry = true;
-                                System.out.println("finished last phase");
                                 testState.startCoolDown();
                                 measureEnd = now;
                                 LOG.info("{} :: Waiting for all terminals to finish ..", StringUtil.bold("TERMINATE"));
@@ -263,7 +259,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             // Compute the next interval
             // and how many messages to deliver
             if (phase != null) {
-                System.out.println("getting nextInterval");
                 if (phase.isReplay()) {
                     // nextToAdd isn't used in replay phases
                     // interval is simply the time of the next transaction
