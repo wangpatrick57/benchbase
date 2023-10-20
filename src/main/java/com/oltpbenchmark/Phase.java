@@ -17,13 +17,22 @@
 
 package com.oltpbenchmark;
 
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileQueue;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
 import com.oltpbenchmark.util.StringUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
+
 public class Phase {
+    private static final Logger LOG = LoggerFactory.getLogger(Phase.class);
+
     public enum Arrival {
         REGULAR, POISSON, REPLAY
     }
@@ -47,6 +56,8 @@ public class Phase {
     private final int activeTerminals;
     private int nextSerial;
 
+    private ReplayFileQueue replayFileQueue;
+
 
     Phase(String benchmarkName, int id, int t, int wt, double r, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replay, boolean timed, int activeTerminals, Arrival a) {
         this.benchmarkName = benchmarkName;
@@ -64,6 +75,10 @@ public class Phase {
         this.nextSerial = 1;
         this.activeTerminals = activeTerminals;
         this.arrival = a;
+
+        if (this.isReplay()) {
+            this.replayFileQueue = new ReplayFileQueue();
+        }
     }
 
 
@@ -146,13 +161,51 @@ public class Phase {
     }
 
     /**
+     * Check whether the next replay transaction is in the past.
+     * May block if ReplayFileQueue blocks.
+     * @return Whether the next replay transaction is in the past
+     */
+    public boolean isNextReplayTransactionInPast() {
+        if (!this.isReplay()) {
+            throw new RuntimeException("hasPastReplayProcedure should only be called for replay phases");
+        }
+
+        Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
+
+        if (replayTransactionOpt.isEmpty()) {
+            // this means there are no more transactions period
+            LOG.warn("In replay phases, isNextReplayTransactionInPast() should only be called if there are more replay transactions");
+            return false;
+        } else {
+            return replayTransactionOpt.get().getReplayTime() <= System.nanoTime();
+        }
+    }
+
+    /**
      * Generates the next submitted procedure for this phase
+     * May block if ReplayFileQueue blocks.
+     * @return The next SubmittedProcedure to run for this phase
      */
     public SubmittedProcedure generateSubmittedProcedure() {
         return this.generateSubmittedProcedure(false);
     }
 
     public SubmittedProcedure generateSubmittedProcedure(boolean isColdQuery) {
+        Optional<List<Object>> runArgs = Optional.empty();
+
+        if (this.isReplay()) {
+            Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
+            if (replayTransactionOpt.isEmpty()) {
+                LOG.warn("In replay phases, generateSubmittedProcedure() should only be called if there are more replay transactions");
+                // runArgs being empty causes DynamicProcedure to just be a NOOP
+                runArgs = Optional.empty();
+            } else {
+                runArgs = Optional.of(new ArrayList<Object>());
+                runArgs.get().add(replayTransactionOpt.get());
+            }
+        }
+
+        // TODO: in the future, pass runArgs to SubmittedProcedure
         return new SubmittedProcedure(this.chooseTransaction(isColdQuery));
     }
 

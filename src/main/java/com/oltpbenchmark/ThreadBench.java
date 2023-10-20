@@ -18,12 +18,9 @@
 package com.oltpbenchmark;
 
 import com.oltpbenchmark.LatencyRecord.Sample;
-import com.oltpbenchmark.Phase.Arrival;
 import com.oltpbenchmark.api.BenchmarkModule;
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.benchmarks.replay.util.ReplayFileProcessor;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.util.StringUtil;
 import org.apache.commons.collections4.map.ListOrderedMap;
@@ -103,37 +100,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         }
 
         return requests;
-    }
-
-    private Results runReplayBenchmark() {
-        // IGNORE THIS: boilerplate to set up a phase
-        WorkloadConfiguration workConf = this.workConfs.get(0);
-        workConf.initializeState(testState);
-        WorkloadState workState = workConf.getWorkloadState();
-        this.createWorkerThreads();
-        workState.switchToNextPhase();
-        long start = System.nanoTime();
-        long measureEnd = -1;
-        testState.blockForStart();
-        // END IGNORE THIS
-
-        ReplayFileProcessor replayFileProcessor = new ReplayFileProcessor();
-
-        while (true) {
-            long nextInterval = replayFileProcessor.getNextReadyTimestamp();
-            long now = sleepUntil(nextInterval);
-            List<List<SQLStmt>> transactions = replayFileProcessor.getNextReadyTransactions();
-            workState.addToQueue(transactions.size(), false); // this is just temporary
-
-            if (!replayFileProcessor.hasNextTransaction()) {
-                measureEnd = now;
-                this.interruptWorkers();
-                testState.startCoolDown();
-                break;
-            }
-        }
-
-        return this.gatherResults(measureEnd - start);
     }
 
     private Results runRateLimitedMultiPhase() {
@@ -323,7 +289,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
     }
 
     /**
-     * @brief Sleep until a given timestamp. If this timestamp is in the past, do nothing.
+     * Sleep until a given timestamp. If this timestamp is in the past, do nothing.
      * @param sleepUntilTime The timestamp (in nanoseconds) to sleep until
      * @return The actual timestamp when the loop was exited
      * @throws RuntimeException
@@ -349,7 +315,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
     }
 
     /**
-     * @brief Gather and create a Results object
+     * Gather and create a Results object
      * @param nanoseconds The duration, in nanoseconds, from start to when measuring ends
      * @return
      */

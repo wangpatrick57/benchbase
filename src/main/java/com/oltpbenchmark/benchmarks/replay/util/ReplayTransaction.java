@@ -9,7 +9,7 @@ public class ReplayTransaction {
     private long replayTime;
 
     /**
-     * @brief A ReplayTransaction represents a single transaction to replay
+     * A ReplayTransaction represents a single transaction to replay
      * @param[in] sqlStmts The SQLStmts in this transaction
      * @param[in] replayTime The timestamp, in nanoseconds, this transaction should be replayed at. This is
      *                       the transaction's timestamp in the replay file shifted over.

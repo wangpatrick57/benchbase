@@ -8,7 +8,7 @@ import com.oltpbenchmark.api.SQLStmt;
 
 public class ReplayFileQueue {
     /**
-     * @brief ReplayFileQueue provides a queue interface over a replay file.
+     * ReplayFileQueue provides a queue interface over a replay file.
      * 
      * One important note is that the peek() and pop() operations may block for disk reads.
      * Prefetching is used to avoid this as much as possible, but if the rate of peek() and pop()
@@ -19,7 +19,7 @@ public class ReplayFileQueue {
     }
 
     /**
-     * @brief Return the "front" replay transaction
+     * Return the "front" replay transaction
      * 
      * Will block until there are buffered transactions or the end of the file is reached.
      * 
@@ -33,7 +33,7 @@ public class ReplayFileQueue {
     }
 
     /**
-     * @brief Advance to the next replay transaction
+     * Advance to the next replay transaction
      * 
      * Will block until there are buffered transactions or the end of the file is reached.
      */

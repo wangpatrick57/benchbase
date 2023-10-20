@@ -27,8 +27,8 @@
  import com.oltpbenchmark.api.Procedure;
 
  /**
-  * @brief A Procedure which can represent an arbitrary list of SQLStmts which
-  *        is passed in as an argument at runtime.
+  * A Procedure which can represent an arbitrary list of SQLStmts which
+  * is passed in as an argument at runtime.
   * 
   * The reason it takes in a list of SQLStmts is so that it can represent
   * multi-statement transactions.
