@@ -22,6 +22,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.oltpbenchmark.api.Procedure;
@@ -34,7 +35,7 @@ import com.oltpbenchmark.api.Procedure;
  * multi-statement transactions.
  */
 public class DynamicProcedure extends Procedure {
-    public void run(Connection conn, List<Object> runArgs) throws SQLException {
+    public void run(Connection conn, Optional<List<Object>> runArgs) throws SQLException {
         List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
         for (SQLStmt sqlStmt : sqlStmts) {
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
@@ -43,7 +44,7 @@ public class DynamicProcedure extends Procedure {
         }
     }
 
-    private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
-        return runArgs.stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
+    private static List<SQLStmt> convertArgumentsToSQLStmts(Optional<List<Object>> runArgs) {
+        return runArgs.get().stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
     }
 }

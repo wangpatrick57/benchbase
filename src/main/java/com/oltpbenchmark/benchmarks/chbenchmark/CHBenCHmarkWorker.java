@@ -26,6 +26,7 @@ import com.oltpbenchmark.types.TransactionStatus;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 public class CHBenCHmarkWorker extends Worker<CHBenCHmark> {
     public CHBenCHmarkWorker(CHBenCHmark benchmarkModule, int id) {
@@ -33,7 +34,7 @@ public class CHBenCHmarkWorker extends Worker<CHBenCHmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> runArgs) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
         try {
             GenericQuery proc = (GenericQuery) this.getProcedure(nextTransaction.getProcedureClass());
             proc.run(conn);

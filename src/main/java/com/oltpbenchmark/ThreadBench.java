@@ -116,11 +116,11 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
 
         // CORE CODE: demos passing a sql statement
-        List<SubmittedProcedureRun> submittedProcedureRuns = new ArrayList<SubmittedProcedureRun>();
-        List<Object> sqlStmts = new ArrayList<Object>();
-        sqlStmts.add(new SQLStmt("SELECT * FROM customer LIMIT 10;"));
-        submittedProcedureRuns.add(new SubmittedProcedureRun(1, sqlStmts));
-        workState.addToQueue(submittedProcedureRuns);
+        List<SubmittedProcedure> submittedProcedures = new ArrayList<SubmittedProcedure>();
+        Optional<List<Object>> sqlStmts = Optional.of(new ArrayList<Object>());
+        sqlStmts.get().add(new SQLStmt("SELECT * FROM customer LIMIT 10;"));
+        submittedProcedures.add(new SubmittedProcedure(1, sqlStmts));
+        workState.addToQueue(submittedProcedures);
         // END CORE CODE
 
 
@@ -205,7 +205,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                 } else {
                     rateFactor = 1;
                 }
-                workState.addToQueueForPhase(nextToAdd * rateFactor, resetQueues);
+                workState.addToQueueForCurrentPhase(nextToAdd * rateFactor, resetQueues);
             }
             resetQueues = false;
 

@@ -39,7 +39,7 @@ public class WorkloadState {
     private static final Logger LOG = LoggerFactory.getLogger(WorkloadState.class);
 
     private final BenchmarkState benchmarkState;
-    private final LinkedList<SubmittedProcedureRun> workQueue = new LinkedList<>();
+    private final LinkedList<SubmittedProcedure> workQueue = new LinkedList<>();
     private final int num_terminals;
     private final Iterator<Phase> phaseIterator;
 
@@ -60,17 +60,17 @@ public class WorkloadState {
     /**
      * Add submitted procedures to the queue and wake up workers.
      */
-    public void addToQueue(List<SubmittedProcedureRun> submittedProcedureRuns) {
+    public void addToQueue(List<SubmittedProcedure> submittedProcedures) {
         synchronized (this) {
             int workAdded = 0;
 
             // Add the specified number of procedures to the end of the queue.
-            for (SubmittedProcedureRun submittedProcedureRun : submittedProcedureRuns) {
+            for (SubmittedProcedure submittedProcedure : submittedProcedures) {
                 // If we can't keep up with current rate, truncate transactions
                 if (workQueue.size() >= RATE_QUEUE_LIMIT) {
                     break;
                 }
-                workQueue.add(submittedProcedureRun);
+                workQueue.add(submittedProcedure);
                 workAdded++;
             }
 
@@ -85,7 +85,7 @@ public class WorkloadState {
     /**
      * Add to the queue as specified by the current phase.
      */
-    public void addToQueueForPhase(int amount, boolean resetQueues) {
+    public void addToQueueForCurrentPhase(int amount, boolean resetQueues) {
         synchronized (this) {
             if (resetQueues) {
                 workQueue.clear();
@@ -98,14 +98,14 @@ public class WorkloadState {
             }
             
             // Generate procedures to add to the queue
-            List<SubmittedProcedureRun> submittedProcedureRuns = new ArrayList<SubmittedProcedureRun>();
+            List<SubmittedProcedure> submittedProcedures = new ArrayList<SubmittedProcedure>();
             for (int i = 0; i < amount; ++i) {
                 // Note that we may be calling currentPhase.chooseTransaction() more times than will be
                 // added to the workQueue by addToQueue (due to RATE_QUEUE_LIMIT). If currentPhase.chooseTransaction()
                 // becomes stateful, this code will need to change
-                submittedProcedureRuns.add(new SubmittedProcedureRun(currentPhase.chooseTransaction()));
+                submittedProcedures.add(new SubmittedProcedure(currentPhase.chooseTransaction()));
             }
-            addToQueue(submittedProcedureRuns);
+            addToQueue(submittedProcedures);
         }
     }
 
@@ -123,7 +123,7 @@ public class WorkloadState {
     /**
      * Called by ThreadPoolThreads when waiting for work.
      */
-    public SubmittedProcedureRun fetchWork() {
+    public SubmittedProcedure fetchWork() {
         synchronized (this) {
             if (currentPhase != null && currentPhase.isSerial()) {
                 ++workersWaiting;
@@ -141,7 +141,7 @@ public class WorkloadState {
                 }
 
                 ++workersWorking;
-                return new SubmittedProcedureRun(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
+                return new SubmittedProcedure(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
             }
         }
 
@@ -150,7 +150,7 @@ public class WorkloadState {
             synchronized (this) {
                 ++workersWorking;
             }
-            return new SubmittedProcedureRun(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
+            return new SubmittedProcedure(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
         }
 
         synchronized (this) {

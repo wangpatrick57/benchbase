@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.List;
+import java.util.Optional;
 
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
@@ -41,7 +42,7 @@ public class TemplatedWorker extends Worker<TemplatedBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, List<Object> runArgs)
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs)
             throws UserAbortException, SQLException {
         try {
             Class<? extends Procedure> clazz = nextTransaction.getProcedureClass();

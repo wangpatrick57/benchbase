@@ -32,6 +32,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * SmallBank Benchmark Work Driver
@@ -101,7 +102,7 @@ public class SmallBankWorker extends Worker<SmallBankBenchmark> {
 
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType txnType, List<Object> runArgs) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType txnType, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
         Class<? extends Procedure> procClass = txnType.getProcedureClass();
 
         // Amalgamate

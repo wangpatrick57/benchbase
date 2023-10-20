@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.List;
@@ -233,7 +234,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             // Grab some work and update the state, in case it changed while we
             // waited.
 
-            SubmittedProcedureRun pieceOfWork = workloadState.fetchWork();
+            SubmittedProcedure pieceOfWork = workloadState.fetchWork();
 
             prePhase = workloadState.getCurrentPhase();
             if (prePhase == null) {
@@ -257,7 +258,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             // PART 3: Execute work
 
             TransactionType transactionType = getTransactionType(pieceOfWork, prePhase, preState, workloadState);
-            List<Object> runArgs = pieceOfWork.getRunArgs();
+            Optional<List<Object>> runArgs = pieceOfWork.getRunArgs();
 
             if (!transactionType.equals(TransactionType.INVALID)) {
 
@@ -347,7 +348,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         tearDown();
     }
 
-    private TransactionType getTransactionType(SubmittedProcedureRun pieceOfWork, Phase phase, State state, WorkloadState workloadState) {
+    private TransactionType getTransactionType(SubmittedProcedure pieceOfWork, Phase phase, State state, WorkloadState workloadState) {
         TransactionType type = TransactionType.INVALID;
 
         try {
@@ -385,7 +386,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @param databaseType TODO
      * @param transactionType TODO
      */
-    protected final void doWork(DatabaseType databaseType, TransactionType transactionType, List<Object> runArgs) {
+    protected final void doWork(DatabaseType databaseType, TransactionType transactionType, Optional<List<Object>> runArgs) {
         try {
             int retryCount = 0;
             int maxRetryCount = configuration.getMaxRetries();
@@ -522,13 +523,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     }
 
     /**
-     * Wrapper around executeWork() for null runArgs.
-     */
-    protected TransactionStatus executeWork(Connection conn, TransactionType txnType) throws UserAbortException, SQLException {
-        return executeWork(conn, txnType, null);
-    }
-
-    /**
      * Invoke a single transaction for the given TransactionType
      *
      * @param conn    TODO
@@ -538,7 +532,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @throws UserAbortException TODO
      * @throws SQLException       TODO
      */
-    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType, List<Object> runArgs) throws UserAbortException, SQLException;
+    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType, Optional<List<Object>> runArgs) throws UserAbortException, SQLException;
 
     /**
      * Called at the end of the test to do any clean up that may be required.

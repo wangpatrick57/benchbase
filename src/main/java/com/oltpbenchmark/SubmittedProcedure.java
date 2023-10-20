@@ -18,6 +18,7 @@
 package com.oltpbenchmark;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * This class is used for keeping track of the procedures that have been
@@ -25,16 +26,16 @@ import java.util.List;
  *
  * @author breilly
  */
-public class SubmittedProcedureRun {
+public class SubmittedProcedure {
     private final int type;
     private final long startTime;
-    private final List<Object> runArgs;
+    private final Optional<List<Object>> runArgs;
 
-    SubmittedProcedureRun(int type) {
+    SubmittedProcedure(int type) {
         this(type, null);
     }
 
-    SubmittedProcedureRun(int type, List<Object> runArgs) {
+    SubmittedProcedure(int type, Optional<List<Object>> runArgs) {
         this.type = type;
         this.runArgs = runArgs;
         this.startTime = System.nanoTime();
@@ -48,7 +49,7 @@ public class SubmittedProcedureRun {
         return startTime;
     }
 
-    public List<Object> getRunArgs() {
+    public Optional<List<Object>> getRunArgs() {
         return runArgs;
     }
 }
