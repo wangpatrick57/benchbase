@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 
 public class HYADAPTWorker extends Worker<HYADAPTBenchmark> {
     private static final Logger LOG = LoggerFactory.getLogger(HYADAPTWorker.class);
@@ -51,7 +53,7 @@ public class HYADAPTWorker extends Worker<HYADAPTBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
         Class<? extends Procedure> procClass = nextTrans.getProcedureClass();
 
         if (procClass.equals(ReadRecord1.class)) {
