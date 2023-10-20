@@ -146,16 +146,23 @@ public class Phase {
     }
 
     /**
+     * Generates the next submitted procedure for this phase
+     */
+    public SubmittedProcedure generateSubmittedProcedure() {
+        return this.generateSubmittedProcedure(false);
+    }
+
+    public SubmittedProcedure generateSubmittedProcedure(boolean isColdQuery) {
+        return new SubmittedProcedure(this.chooseTransaction(isColdQuery));
+    }
+
+    /**
      * This simply computes the next transaction by randomly selecting one based
      * on the weights of this phase.
      *
      * @return
      */
-    public int chooseTransaction() {
-        return chooseTransaction(false);
-    }
-
-    public int chooseTransaction(boolean isColdQuery) {
+    private int chooseTransaction(boolean isColdQuery) {
         if (isDisabled()) {
             return -1;
         }

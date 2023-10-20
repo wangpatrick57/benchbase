@@ -45,7 +45,7 @@ public class WorkloadState {
     private int workersWorking = 0;
     private int workerNeedSleep;
 
-    private Phase currentPhase = null;
+private Phase currentPhase = null;
 
     public WorkloadState(BenchmarkState benchmarkState, List<Phase> works, int num_terminals) {
         this.benchmarkState = benchmarkState;
@@ -71,12 +71,20 @@ public class WorkloadState {
                     || !currentPhase.isRateLimited() || currentPhase.isSerial()) {
                 return;
             }
-            
-            // Add the specified number of procedures to the end of the queue.
-            // If we can't keep up with current rate, truncate transactions
-            for (int i = 0; i < amount && workQueue.size() <= RATE_QUEUE_LIMIT; ++i) {
-                workQueue.add(new SubmittedProcedure(currentPhase.chooseTransaction()));
-                workAdded++;
+
+            if (currentPhase.isReplay()) {
+                // If the phase is a replay phase, ignore amount and add to the queue based on timestamp
+                while (currentPhase.hasProcedureInPast()) {
+                    workQueue.add(currentPhase.generateSubmittedProcedure());
+                    workAdded++;
+                }
+            } else {
+                // Add the specified number of procedures to the end of the queue.
+                // If we can't keep up with current rate, truncate transactions
+                for (int i = 0; i < amount && workQueue.size() <= RATE_QUEUE_LIMIT; ++i) {
+                    workQueue.add(currentPhase.generateSubmittedProcedure());
+                    workAdded++;
+                }
             }
 
             // Wake up sleeping workers to deal with the new work.
@@ -119,7 +127,7 @@ public class WorkloadState {
                 }
 
                 ++workersWorking;
-                return new SubmittedProcedure(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
+                return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
             }
         }
 
@@ -128,7 +136,7 @@ public class WorkloadState {
             synchronized (this) {
                 ++workersWorking;
             }
-            return new SubmittedProcedure(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
+            return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
         }
 
         synchronized (this) {
