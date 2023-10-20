@@ -35,6 +35,7 @@
   */
  public class DynamicProcedure extends Procedure {
      public void run(Connection conn, List<Object> runArgs) throws SQLException {
+        System.out.println("DynamicProcedure.run() called");
         List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
         for (SQLStmt sqlStmt : sqlStmts) {
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);

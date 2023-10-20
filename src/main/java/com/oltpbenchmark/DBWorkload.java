@@ -18,12 +18,10 @@
 
 package com.oltpbenchmark;
 
-import com.oltpbenchmark.Phase.Arrival;
 import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.TransactionTypes;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.benchmarks.replay.ReplayBenchmark;
 import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.*;
 import org.apache.commons.cli.*;
@@ -353,7 +351,7 @@ public class DBWorkload {
                     if (serial) {
                         LOG.info("Timer enabled for serial run; will run queries" + " serially in a loop until the timer expires.");
                     } else if (replay) {
-                        LOG.info("Timer enabled for replay run; will execute as many queries in the log file as possible before timer expires");
+                        LOG.info("Timer enabled for replay run; will run queries in the log file in a loop until the timer expires");
                     }
                 }
                 if (warmup < 0) {

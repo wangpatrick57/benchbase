@@ -107,6 +107,10 @@ public class Phase {
         return !timed && serial;
     }
 
+    public boolean isUntimedReplay() {
+        return !timed && replay;
+    }
+
     public boolean isThroughputRun() {
         return !isLatencyRun();
     }
@@ -173,8 +177,8 @@ public class Phase {
         Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
 
         if (replayTransactionOpt.isEmpty()) {
-            // this means there are no more transactions period
             LOG.warn("In replay phases, isNextReplayTransactionInPast() should only be called if there are more replay transactions");
+            // return false as a safe value
             return false;
         } else {
             return replayTransactionOpt.get().getReplayTime() <= System.nanoTime();
@@ -195,6 +199,26 @@ public class Phase {
     }
 
     /**
+     * Get the timestamp the next replay transaction should be played at
+     * @return The timestamp
+     */
+    public long getNextReplayTransactionTimestamp() {
+        if (!this.isReplay()) {
+            throw new RuntimeException("getNextReplayTransactionTimestamp should only be called for replay phases");
+        }
+
+        Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
+
+        if (replayTransactionOpt.isEmpty()) {
+            LOG.warn("In replay phases, getNextReplayTransactionTimestamp() should only be called if there are more replay transactions");
+            // return the current time as a safe value
+            return System.nanoTime();
+        } else {
+            return replayTransactionOpt.get().getReplayTime();
+        }
+    }
+
+    /**
      * Generates the next submitted procedure for this phase
      * May block if ReplayFileQueue blocks.
      * @return The next SubmittedProcedure to run for this phase
@@ -207,14 +231,17 @@ public class Phase {
         Optional<List<Object>> runArgs = Optional.empty();
 
         if (this.isReplay()) {
-            Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
-            if (replayTransactionOpt.isEmpty()) {
-                LOG.warn("In replay phases, generateSubmittedProcedure() should only be called if there are more replay transactions");
-                // runArgs being empty causes DynamicProcedure to just be a NOOP
-                runArgs = Optional.empty();
-            } else {
-                runArgs = Optional.of(new ArrayList<Object>());
-                runArgs.get().add(replayTransactionOpt.get());
+            synchronized (this) {
+                Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
+                if (replayTransactionOpt.isEmpty()) {
+                    LOG.warn("In replay phases, generateSubmittedProcedure() should only be called if there are more replay transactions");
+                    // runArgs being empty causes DynamicProcedure to just be a NOOP
+                    runArgs = Optional.empty();
+                } else {
+                    runArgs = Optional.of(new ArrayList<Object>());
+                    runArgs.get().add(replayTransactionOpt.get());
+                    this.replayFileQueue.pop();
+                }
             }
         }
 

@@ -59,6 +59,7 @@ private Phase currentPhase = null;
      * Add a request to do work.
      */
     public void addToQueue(int amount, boolean resetQueues) {
+        System.out.println("entering addToQueue()");
         int workAdded = 0;
         
         synchronized (this) {
@@ -67,12 +68,14 @@ private Phase currentPhase = null;
             }
 
             // Only use the work queue if the phase is enabled and rate limited.
+            System.out.println("before first if in addToQueue()");
             if (currentPhase == null || currentPhase.isDisabled()
                     || !currentPhase.isRateLimited() || currentPhase.isSerial()) {
                 return;
             }
 
             if (currentPhase.isReplay()) {
+                System.out.println("entering replay if in addToQueue()");
                 // If the phase is a replay phase, ignore amount and add to the queue based on timestamp
                 while (currentPhase.isNextReplayTransactionInPast()) {
                     workQueue.add(currentPhase.generateSubmittedProcedure());
