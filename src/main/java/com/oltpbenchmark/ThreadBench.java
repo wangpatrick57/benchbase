@@ -261,7 +261,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             if (phase != null) {
                 if (phase.isReplay()) {
                     // nextToAdd isn't used in replay phases
-                    // interval is simply the time of the next transaction
+                    // nextInterval is simply the time of the next transaction
                     nextInterval = phase.getNextReplayTransactionTimestamp();
                 } else {
                     intervalNs = 0;

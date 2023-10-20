@@ -232,6 +232,7 @@ public class Phase {
 
         if (this.isReplay()) {
             synchronized (this) {
+                // since both peek() and pop() may be called for replayFileQueue, this chunk of code needs to be synchronized
                 Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
                 if (replayTransactionOpt.isEmpty()) {
                     LOG.warn("In replay phases, generateSubmittedProcedure() should only be called if there are more replay transactions");
@@ -245,7 +246,7 @@ public class Phase {
             }
         }
 
-        // TODO: in the future, pass runArgs to SubmittedProcedure
+        // TODO: in the runArgs PR, pass runArgs to SubmittedProcedure
         return new SubmittedProcedure(this.chooseTransaction(isColdQuery));
     }
 
