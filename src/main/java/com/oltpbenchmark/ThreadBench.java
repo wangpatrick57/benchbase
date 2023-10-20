@@ -52,7 +52,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
         ThreadBench bench = new ThreadBench(workers, workConfs, intervalMonitoring);
         return bench.runRateLimitedMultiPhase();
-        // return bench.runReplayBenchmark();
     }
 
     private void createWorkerThreads() {
@@ -175,12 +174,12 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             }
             resetQueues = false;
 
+            // Wait until the interval expires, which may be "don't wait"
+            long now = System.nanoTime();
             if (phase != null) {
                 warmup = warmupStart + phase.getWarmupTime() * 1000000000L;
             }
 
-            // Wait until the interval expires, which may be "don't wait"
-            long now = System.nanoTime();
             long diff = nextInterval - now;
             while (diff > 0) { // this can wake early: sleep multiple times to avoid that
                 long ms = diff / 1000000;
