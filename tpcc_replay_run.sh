@@ -1,7 +1,7 @@
 #!/bin/bash
 DBLAB_DPATH="$HOME/Documents/mastersStuff/dblab"
 DBLAB_POSTGRES_DPATH="$DBLAB_DPATH/postgres"
-GEN_LOG_CSV_SPATH="$DBLAB_POSTGRES_DPATH/postgres.csv"
+GEN_LOG_CSV_SPATH="$DBLAB_POSTGRES_DPATH/postgresql.csv"
 PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/tpcc_log.csv"
 
 SKIP_BUILD=""
