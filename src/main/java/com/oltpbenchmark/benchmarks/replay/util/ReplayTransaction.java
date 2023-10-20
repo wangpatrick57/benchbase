@@ -6,24 +6,23 @@ import com.oltpbenchmark.api.SQLStmt;
 
 public class ReplayTransaction {
     private List<SQLStmt> sqlStmts;
-    private long replayTime;
+    private long logTime;
 
     /**
      * A ReplayTransaction represents a single transaction to replay
      * @param[in] sqlStmts The SQLStmts in this transaction
-     * @param[in] replayTime The timestamp, in nanoseconds, this transaction should be replayed at. This is
-     *                       the transaction's timestamp in the replay file shifted over.
+     * @param[in] logTime The timestamp, in nanoseconds, this transaction was logged at
      */
-    public ReplayTransaction(List<SQLStmt> sqlStmts, long replayTime) {
+    public ReplayTransaction(List<SQLStmt> sqlStmts, long logTime) {
         this.sqlStmts = sqlStmts;
-        this.replayTime = replayTime;
+        this.logTime = logTime;
     }
 
     public List<SQLStmt> getSQLStmts() {
         return this.sqlStmts;
     }
 
-    public long getReplayTime() {
-        return this.replayTime;
+    public long getLogTime() {
+        return this.logTime;
     }
 }

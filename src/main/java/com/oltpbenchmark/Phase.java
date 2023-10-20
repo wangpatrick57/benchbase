@@ -181,7 +181,7 @@ public class Phase {
             // return false as a safe value
             return false;
         } else {
-            return replayTransactionOpt.get().getReplayTime() <= System.nanoTime();
+            return replayTransactionOpt.get().getLogTime() <= System.nanoTime();
         }
     }
 
@@ -214,7 +214,7 @@ public class Phase {
             // return the current time as a safe value
             return System.nanoTime();
         } else {
-            return replayTransactionOpt.get().getReplayTime();
+            return replayTransactionOpt.get().getLogTime();
         }
     }
 
