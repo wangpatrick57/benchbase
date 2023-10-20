@@ -182,6 +182,19 @@ public class Phase {
     }
 
     /**
+     * Check whether there is a next replay transaction
+     * @return Whether there is a next replay transaction
+     */
+    public boolean existsNextReplayTransaction() {
+        if (!this.isReplay()) {
+            throw new RuntimeException("existsNextReplayTransaction should only be called for replay phases");
+        }
+
+        Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
+        return !replayTransactionOpt.isEmpty();
+    }
+
+    /**
      * Generates the next submitted procedure for this phase
      * May block if ReplayFileQueue blocks.
      * @return The next SubmittedProcedure to run for this phase

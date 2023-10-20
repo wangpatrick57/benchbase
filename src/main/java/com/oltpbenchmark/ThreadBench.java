@@ -179,8 +179,20 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                 warmup = warmupStart + phase.getWarmupTime() * 1000000000L;
             }
 
-            long now = sleepUntil(nextInterval);
+            // Wait until the interval expires, which may be "don't wait"
+            long now = System.nanoTime();
             long diff = nextInterval - now;
+            while (diff > 0) { // this can wake early: sleep multiple times to avoid that
+                long ms = diff / 1000000;
+                diff = diff % 1000000;
+                try {
+                    Thread.sleep(ms, (int) diff);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                now = System.nanoTime();
+                diff = nextInterval - now;
+            }
 
             boolean phaseComplete = false;
             if (phase != null) {
@@ -285,41 +297,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             }
         }
 
-        return this.gatherResults(measureEnd - start);
-    }
-
-    /**
-     * Sleep until a given timestamp. If this timestamp is in the past, do nothing.
-     * @param sleepUntilTime The timestamp (in nanoseconds) to sleep until
-     * @return The actual timestamp when the loop was exited
-     * @throws RuntimeException
-     * 
-     * @post The return value will be >= sleepUntilTime.
-     */
-    private long sleepUntil(long sleepUntilTime) throws RuntimeException {
-        // Wait until the interval expires, which may be "don't wait"
-        long now = System.nanoTime();
-        long diff = sleepUntilTime - now;
-        while (diff > 0) { // this can wake early: sleep multiple times to avoid that
-            long ms = diff / 1000000;
-            diff = diff % 1000000;
-            try {
-                Thread.sleep(ms, (int) diff);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            now = System.nanoTime();
-            diff = sleepUntilTime - now;
-        }
-        return now;
-    }
-
-    /**
-     * Gather and create a Results object
-     * @param nanoseconds The duration, in nanoseconds, from start to when measuring ends
-     * @return
-     */
-    private Results gatherResults(long nanoseconds) {
         try {
             int requests = finalizeWorkers(this.workerThreads);
 
@@ -339,7 +316,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             }
             DistributionStatistics stats = DistributionStatistics.computeStatistics(latencies);
 
-            Results results = new Results(nanoseconds, requests, stats, samples);
+            Results results = new Results(measureEnd - start, requests, stats, samples);
 
             // Compute transaction histogram
             Set<TransactionType> txnTypes = new HashSet<>();
