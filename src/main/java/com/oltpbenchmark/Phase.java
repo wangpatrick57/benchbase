@@ -40,6 +40,7 @@ public class Phase {
     private final boolean rateLimited;
     private final boolean disabled;
     private final boolean serial;
+    private final boolean replay;
     private final boolean timed;
     private final List<Double> weights;
     private final int weightCount;
@@ -47,7 +48,7 @@ public class Phase {
     private int nextSerial;
 
 
-    Phase(String benchmarkName, int id, int t, int wt, double r, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean timed, int activeTerminals, Arrival a) {
+    Phase(String benchmarkName, int id, int t, int wt, double r, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replay, boolean timed, int activeTerminals, Arrival a) {
         this.benchmarkName = benchmarkName;
         this.id = id;
         this.time = t;
@@ -58,6 +59,7 @@ public class Phase {
         this.rateLimited = rateLimited;
         this.disabled = disabled;
         this.serial = serial;
+        this.replay = replay;
         this.timed = timed;
         this.nextSerial = 1;
         this.activeTerminals = activeTerminals;
@@ -76,6 +78,10 @@ public class Phase {
 
     public boolean isSerial() {
         return serial;
+    }
+
+    public boolean isReplay() {
+        return replay;
     }
 
     public boolean isTimed() {

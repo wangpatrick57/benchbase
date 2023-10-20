@@ -15,13 +15,15 @@
     <terminals>2</terminals>
     <works>
         <work>
-            <time>1</time>
+            <replay>true</replay>
+            <!-- TODO: figure out how to not make the user specify this  -->
             <rate>1</rate>
             <weights>1</weights>
         </work>
     </works>
 
     <!-- Transaction types -->
+    <!-- TODO: figure out how to not make the user specify this  -->
     <transactiontypes>
         <transactiontype>
             <name>DynamicProcedure</name>

@@ -317,6 +317,12 @@ public class DBWorkload {
                 // a serial (rather than random) order.
                 boolean serial = Boolean.parseBoolean(work.getString("serial", Boolean.FALSE.toString()));
 
+                // We now have the option of replaying queries from a log file
+                boolean replay = Boolean.parseBoolean(work.getString("replay", Boolean.FALSE.toString()));
+
+                if (serial && replay) {
+                    LOG.error(String.format("Configuration error in work %d: " + "A phase cannot be both serial and replay", i));
+                }
 
                 int activeTerminals;
                 activeTerminals = work.getInt("active_terminals[not(@bench)]", terminals);
@@ -337,12 +343,18 @@ public class DBWorkload {
                 if (!timed) {
                     if (serial) {
                         LOG.info("Timer disabled for serial run; will execute" + " all queries exactly once.");
+                    } else if (replay) {
+                        LOG.info("Timer disabled for replay run; will execute" + " all queries in the log file.");
                     } else {
                         LOG.error("Must provide positive time bound for" + " non-serial executions. Either provide" + " a valid time or enable serial mode.");
                         System.exit(-1);
                     }
-                } else if (serial) {
-                    LOG.info("Timer enabled for serial run; will run queries" + " serially in a loop until the timer expires.");
+                } else {
+                    if (serial) {
+                        LOG.info("Timer enabled for serial run; will run queries" + " serially in a loop until the timer expires.");
+                    } else if (replay) {
+                        LOG.info("Timer enabled for replay run; will execute as many queries in the log file as possible before timer expires");
+                    }
                 }
                 if (warmup < 0) {
                     LOG.error("Must provide non-negative time bound for" + " warmup.");
@@ -366,7 +378,7 @@ public class DBWorkload {
                 }
 
 
-                wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, timed, activeTerminals, arrival);
+                wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, replay, timed, activeTerminals, arrival);
             }
 
             // CHECKING INPUT PHASES

@@ -160,7 +160,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         for (WorkloadState workState : workStates) {
             workState.switchToNextPhase();
             phase = workState.getCurrentPhase();
-            System.out.println("before log current phase");
             LOG.info(phase.currentPhaseString());
             if (phase.getRate() < lowestRate) {
                 lowestRate = phase.getRate();
@@ -170,7 +169,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         // Change testState to cold query if execution is serial, since we don't
         // have a warm-up phase for serial execution but execute a cold and a
         // measured query in sequence.
-        System.out.println("isLatencyRun " + phase.isLatencyRun());
         if (phase != null && phase.isLatencyRun()) {
             synchronized (testState) {
                 testState.startColdQuery();
