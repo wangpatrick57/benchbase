@@ -54,8 +54,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
     public static Results runRateLimitedBenchmark(List<Worker<? extends BenchmarkModule>> workers,
             List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
         ThreadBench bench = new ThreadBench(workers, workConfs, intervalMonitoring);
-        // return bench.runRateLimitedMultiPhase();
-        return bench.runReplayBenchmark();
+        return bench.runRateLimitedMultiPhase();
+        // return bench.runReplayBenchmark();
     }
 
     private void createWorkerThreads() {
@@ -119,20 +119,21 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
         ReplayFileProcessor replayFileProcessor = new ReplayFileProcessor();
 
-        while (replayFileProcessor.hasNextTransaction()) {
+        while (true) {
             long nextInterval = replayFileProcessor.getNextReadyTimestamp();
-            sleepUntil(nextInterval);
+            long now = sleepUntil(nextInterval);
             List<List<SQLStmt>> transactions = replayFileProcessor.getNextReadyTransactions();
             workState.addToQueue(transactions.size(), false); // this is just temporary
+
+            if (!replayFileProcessor.hasNextTransaction()) {
+                measureEnd = now;
+                this.interruptWorkers();
+                testState.startCoolDown();
+                break;
+            }
         }
 
-        // IGNORE THIS: boilerplate to return a random results object
-        int[] latencies = {1, 2, 3, 4, 5};
-        int measuredRequests = 5;
-        DistributionStatistics stats = DistributionStatistics.computeStatistics(latencies);
-        Results results = new Results(measureEnd - start, measuredRequests, stats, samples);
-        return results;
-        // END IGNORE THIS
+        return this.gatherResults(measureEnd - start);
     }
 
     private Results runRateLimitedMultiPhase() {
@@ -169,6 +170,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         // Change testState to cold query if execution is serial, since we don't
         // have a warm-up phase for serial execution but execute a cold and a
         // measured query in sequence.
+        System.out.println("isLatencyRun " + phase.isLatencyRun());
         if (phase != null && phase.isLatencyRun()) {
             synchronized (testState) {
                 testState.startColdQuery();
@@ -319,6 +321,41 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             }
         }
 
+        return this.gatherResults(measureEnd - start);
+    }
+
+    /**
+     * @brief Sleep until a given timestamp. If this timestamp is in the past, do nothing.
+     * @param sleepUntilTime The timestamp (in nanoseconds) to sleep until
+     * @return The actual timestamp when the loop was exited
+     * @throws RuntimeException
+     * 
+     * @post The return value will be >= sleepUntilTime.
+     */
+    private long sleepUntil(long sleepUntilTime) throws RuntimeException {
+        // Wait until the interval expires, which may be "don't wait"
+        long now = System.nanoTime();
+        long diff = sleepUntilTime - now;
+        while (diff > 0) { // this can wake early: sleep multiple times to avoid that
+            long ms = diff / 1000000;
+            diff = diff % 1000000;
+            try {
+                Thread.sleep(ms, (int) diff);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            now = System.nanoTime();
+            diff = sleepUntilTime - now;
+        }
+        return now;
+    }
+
+    /**
+     * @brief Gather and create a Results object
+     * @param nanoseconds The duration, in nanoseconds, from start to when measuring ends
+     * @return
+     */
+    private Results gatherResults(long nanoseconds) {
         try {
             int requests = finalizeWorkers(this.workerThreads);
 
@@ -338,7 +375,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             }
             DistributionStatistics stats = DistributionStatistics.computeStatistics(latencies);
 
-            Results results = new Results(measureEnd - start, requests, stats, samples);
+            Results results = new Results(nanoseconds, requests, stats, samples);
 
             // Compute transaction histogram
             Set<TransactionType> txnTypes = new HashSet<>();
@@ -367,32 +404,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * @brief Sleep until a given timestamp. If this timestamp is in the past, do nothing.
-     * @param sleepUntilTime The timestamp (in nanoseconds) to sleep until
-     * @return The actual timestamp when the loop was exited
-     * @throws RuntimeException
-     * 
-     * @post The return value will be >= sleepUntilTime.
-     */
-    private long sleepUntil(long sleepUntilTime) throws RuntimeException {
-        // Wait until the interval expires, which may be "don't wait"
-        long now = System.nanoTime();
-        long diff = sleepUntilTime - now;
-        while (diff > 0) { // this can wake early: sleep multiple times to avoid that
-            long ms = diff / 1000000;
-            diff = diff % 1000000;
-            try {
-                Thread.sleep(ms, (int) diff);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            now = System.nanoTime();
-            diff = sleepUntilTime - now;
-        }
-        return now;
     }
 
     private long getInterval(double lowestRate, Phase.Arrival arrival) {

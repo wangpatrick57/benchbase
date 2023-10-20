@@ -35,12 +35,11 @@
   */
  public class DynamicProcedure extends Procedure {
      public void run(Connection conn, List<Object> runArgs) throws SQLException {
-         List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
-         for (SQLStmt sqlStmt : sqlStmts) {
-             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
-             preparedStatement.execute();
-             System.out.printf("DynamicProcedure.run() executed %s\n", sqlStmt.toString());
-         }
+        List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
+        for (SQLStmt sqlStmt : sqlStmts) {
+            PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
+            preparedStatement.execute();
+        }
      }
 
      private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
