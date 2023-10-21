@@ -57,9 +57,10 @@ public class Phase {
     private int nextSerial;
 
     private ReplayFileQueue replayFileQueue;
+    private long replayOffsetNs;
 
 
-    Phase(String benchmarkName, int id, int t, int wt, double r, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replay, boolean timed, int activeTerminals, Arrival a) {
+    Phase(String benchmarkName, int id, int t, int wt, double r, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replay, boolean timed, int activeTerminals, Arrival a, String logFilePath) {
         this.benchmarkName = benchmarkName;
         this.id = id;
         this.time = t;
@@ -77,11 +78,29 @@ public class Phase {
         this.arrival = a;
 
         if (this.isReplay()) {
-            this.replayFileQueue = new ReplayFileQueue();
+            this.replayFileQueue = new ReplayFileQueue(logFilePath);
         }
     }
 
-
+    /**
+     * Any functions which will be called when the phase starts
+     */
+    public void onStart() {
+        this.resetSerial();
+        if (this.isReplay()) {
+            // mark the current time as the start of the replay, which is used to shift logged timestamps over
+            long replayStartTime = System.nanoTime();
+            Optional<ReplayTransaction> replayTransaction = this.replayFileQueue.peek();
+            
+            if (replayTransaction.isEmpty()) {
+                // this means the replay file is empty. we can just set replayOffsetNs to an arbitrary value since the phase will be skipped
+                this.replayOffsetNs = 0;
+            } else {
+                long logStartTime = replayTransaction.get().getLogTime();
+                this.replayOffsetNs = replayStartTime - logStartTime;
+            }
+        }
+    }
 
     public boolean isRateLimited() {
         return rateLimited;
@@ -181,7 +200,7 @@ public class Phase {
             // return false as a safe value
             return false;
         } else {
-            return replayTransactionOpt.get().getLogTime() <= System.nanoTime();
+            return this.getReplayTime(replayTransactionOpt.get().getLogTime()) <= System.nanoTime();
         }
     }
 
@@ -207,15 +226,24 @@ public class Phase {
             throw new RuntimeException("getNextReplayTransactionTimestamp should only be called for replay phases");
         }
 
-        Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
+        Optional<ReplayTransaction> replayTransaction = this.replayFileQueue.peek();
 
-        if (replayTransactionOpt.isEmpty()) {
+        if (replayTransaction.isEmpty()) {
             LOG.warn("In replay phases, getNextReplayTransactionTimestamp() should only be called if there are more replay transactions");
             // return the current time as a safe value
             return System.nanoTime();
         } else {
-            return replayTransactionOpt.get().getLogTime();
+            return this.getReplayTime(replayTransaction.get().getLogTime());
         }
+    }
+
+    /**
+     * Given a log time, get the time the transaction should be replayed
+     * @param logTime
+     * @return The shifted replay time
+     */
+    private long getReplayTime(long logTime) {
+        return logTime + this.replayOffsetNs;
     }
 
     /**

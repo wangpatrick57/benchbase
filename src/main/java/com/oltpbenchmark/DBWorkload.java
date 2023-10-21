@@ -42,6 +42,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -318,9 +320,17 @@ public class DBWorkload {
 
                 // We now have the option of replaying queries from a log file
                 boolean replay = Boolean.parseBoolean(work.getString("replay", Boolean.FALSE.toString()));
+                String logFilePath = DBWorkload.expandTilde(work.getString("logfile", ""));
+                if (replay) {
+                    if (logFilePath == "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is a replay phase but logfile is not specified", i));
+                        System.exit(-1);
+                    }
+                }
 
                 if (serial && replay) {
                     LOG.error(String.format("Configuration error in work %d: " + "A phase cannot be both serial and replay", i));
+                    System.exit(-1);
                 }
 
                 int activeTerminals;
@@ -378,7 +388,7 @@ public class DBWorkload {
                 }
 
 
-                wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, replay, timed, activeTerminals, arrival);
+                wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, replay, timed, activeTerminals, arrival, logFilePath);
             }
 
             // CHECKING INPUT PHASES
@@ -684,5 +694,17 @@ public class DBWorkload {
             return (val != null && val.equalsIgnoreCase("true"));
         }
         return (false);
+    }
+
+    /**
+     * Expands a path starting with ~ to be an absolute path from the user's home
+     * @param path
+     * @return The expanded path
+     */
+    public static String expandTilde(String path) {
+        if (path.startsWith("~")) {
+            return System.getProperty("user.home") + path.substring(1);
+        }
+        return path;
     }
 }

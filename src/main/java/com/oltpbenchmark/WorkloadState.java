@@ -215,7 +215,7 @@ private Phase currentPhase = null;
             {
                 workerNeedSleep = 0;
             } else {
-                this.currentPhase.resetSerial();
+                this.currentPhase.onStart();
                 if (this.currentPhase.isDisabled())
                 // Phase disabled---everyone should sleep
                 {

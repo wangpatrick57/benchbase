@@ -16,6 +16,7 @@
     <works>
         <work>
             <replay>true</replay>
+            <logfile>~/Documents/mastersStuff/dblab/postgres/simple_log.csv</logfile>
             <!-- TODO: figure out how to not make the user specify this  -->
             <rate>1</rate>
             <weights>1</weights>
