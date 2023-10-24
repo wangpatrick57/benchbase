@@ -4,8 +4,8 @@
     <!-- Connection details -->
     <type>POSTGRES</type>
     <driver>org.postgresql.Driver</driver>
-    <url>jdbc:postgresql://localhost:5432/benchbase?sslmode=disable&amp;ApplicationName=replay&amp;reWriteBatchedInserts=true</url>
-    <username>admin</username>
+    <url>jdbc:postgresql://localhost:5432/lab?sslmode=disable&amp;ApplicationName=replay&amp;reWriteBatchedInserts=true</url>
+    <username>patrickwang</username>
     <password>password</password>
     <isolation>TRANSACTION_SERIALIZABLE</isolation>
     <batchsize>128</batchsize>
@@ -28,6 +28,8 @@
     <transactiontypes>
         <transactiontype>
             <name>DynamicProcedure</name>
+            <preExecutionWait>0</preExecutionWait>
+            <postExecutionWait>0</postExecutionWait>
         </transactiontype>
     </transactiontypes>
     

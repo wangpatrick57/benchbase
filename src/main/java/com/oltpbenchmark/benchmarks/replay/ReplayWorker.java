@@ -4,14 +4,13 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.oltpbenchmark.api.Procedure.UserAbortException;
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.TransactionStatus;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,12 +24,14 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
      }
 
      @Override
-     protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction) throws UserAbortException, SQLException {
+     protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
         try {
             DynamicProcedure proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
-            List<Object> runArgs = new ArrayList<Object>();
-            runArgs.add(new SQLStmt("SELECT * FROM customer LIMIT 10;"));
-            proc.run(conn, runArgs);
+            if (runArgs.isEmpty()) {
+                // NOOP
+            } else {
+                proc.run(conn, runArgs.get());
+            }
         } catch (ClassCastException ex) {
             //fail gracefully
             LOG.error("We have been invoked with an INVALID transactionType?!", ex);

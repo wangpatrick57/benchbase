@@ -17,8 +17,9 @@
  package com.oltpbenchmark.benchmarks.replay.procedures;
 
  import com.oltpbenchmark.api.SQLStmt;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
 
- import java.sql.Connection;
+import java.sql.Connection;
  import java.sql.PreparedStatement;
  import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -37,18 +38,21 @@ import java.util.List;
   */
  public class DynamicProcedure extends Procedure {
     public void run(Connection conn, List<Object> runArgs) throws SQLException {
-        List<SQLStmt> sqlStmts = DynamicProcedure.convertArgumentsToSQLStmts(runArgs);
-        for (SQLStmt sqlStmt : sqlStmts) {
-            PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
-            preparedStatement.execute();
-        }
+        ReplayTransaction replayTransaction = DynamicProcedure.castArguments(runArgs);
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String timestampAsString = now.format(formatter);
-        System.out.printf("Executed %s at time %s\n", sqlStmts.toString(), timestampAsString);
+        System.out.printf("Executing %s at time %s\n", replayTransaction.getSQLStmts().toString(), timestampAsString);
+        for (SQLStmt sqlStmt : replayTransaction.getSQLStmts()) {
+            PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
+            preparedStatement.execute();
+        }
     }
 
-    private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
-        return runArgs.stream().map(obj -> (SQLStmt)obj).collect(Collectors.toList());
+    private static ReplayTransaction castArguments(List<Object> runArgs) {
+        if (runArgs.size() != 1) {
+            throw new RuntimeException("Only one argument should be passed to DynamicProcedure");
+        }
+        return (ReplayTransaction)runArgs.get(0);
     }
  }

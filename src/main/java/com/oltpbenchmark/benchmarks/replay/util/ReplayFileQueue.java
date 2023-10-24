@@ -3,7 +3,6 @@ package com.oltpbenchmark.benchmarks.replay.util;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -14,7 +13,6 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Queue;
 import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +27,7 @@ import com.oltpbenchmark.api.SQLStmt;
 public class ReplayFileQueue {
     private static final Logger LOG = LoggerFactory.getLogger(DBWorkload.class);
     private static final int LOG_TIME_INDEX = 0;
-    private static final int MESSAGE_INDEX = 12;
+    private static final int MESSAGE_INDEX = 13;
 
     private Queue<ReplayTransaction> queue;
     private CSVReader csvReader;

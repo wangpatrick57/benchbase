@@ -267,15 +267,14 @@ public class Phase {
                     // runArgs being empty causes DynamicProcedure to just be a NOOP
                     runArgs = Optional.empty();
                 } else {
+                    this.replayFileQueue.pop();
                     runArgs = Optional.of(new ArrayList<Object>());
                     runArgs.get().add(replayTransactionOpt.get());
-                    this.replayFileQueue.pop();
                 }
             }
         }
 
-        // TODO: in the runArgs PR, pass runArgs to SubmittedProcedure
-        return new SubmittedProcedure(this.chooseTransaction(isColdQuery));
+        return new SubmittedProcedure(this.chooseTransaction(isColdQuery), runArgs);
     }
 
     /**
