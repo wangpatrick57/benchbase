@@ -6,10 +6,21 @@ import java.util.Optional;
 import java.util.Queue;
 
 import com.oltpbenchmark.api.SQLStmt;
-import org.apache.commons.lang3.tuple.Pair;
 
 public class ReplayTransaction {
-    private Queue<Pair<SQLStmt, Long>> sqlStmtCalls;
+    private static class SQLStmtCall {
+        private SQLStmt sqlStmt;
+        private List<Object> params;
+        private long callTime;
+
+        private SQLStmtCall(SQLStmt sqlStmt, List<Object> params, long callTime) {
+            this.sqlStmt = sqlStmt;
+            this.params = params;
+            this.callTime = callTime;
+        }
+    }
+
+    private Queue<SQLStmtCall> sqlStmtCalls;
     private long firstLogTime;
     private Optional<Boolean> shouldAbort;
 
@@ -39,8 +50,8 @@ public class ReplayTransaction {
         this.shouldAbort = Optional.of(shouldAbort);
     }
 
-    public void addSQLStmtCall(SQLStmt sqlStmt, long callTime) {
-        this.sqlStmtCalls.add(Pair.of(sqlStmt, callTime));
+    public void addSQLStmtCall(SQLStmt sqlStmt, List<Object> params, long callTime) {
+        this.sqlStmtCalls.add(new SQLStmtCall(sqlStmt, params, callTime));
     }
 
     public int getSQLStmtCallCount() {
@@ -55,14 +66,21 @@ public class ReplayTransaction {
      * @pre The queue is not empty
      */
     public SQLStmt peekSQLStmt() {
-        return this.sqlStmtCalls.peek().getLeft();
+        return this.sqlStmtCalls.peek().sqlStmt;
+    }
+
+    /**
+     * @pre The queue is not empty
+     */
+    public List<Object> peekParams() {
+        return this.sqlStmtCalls.peek().params;
     }
 
     /**
      * @pre The queue is not empty
      */
     public long peekCallTime() {
-        return this.sqlStmtCalls.peek().getRight();
+        return this.sqlStmtCalls.peek().callTime;
     }
 
     /**

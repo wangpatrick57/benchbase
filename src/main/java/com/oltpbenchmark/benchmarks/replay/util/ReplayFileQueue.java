@@ -6,8 +6,10 @@ import java.io.FileReader;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.oltpbenchmark.DBWorkload;
 import com.oltpbenchmark.api.SQLStmt;
+import com.oltpbenchmark.util.Pair;
 
 /**
  * TODO: after finishing, decide whether this should be a subclass of queue
@@ -32,10 +35,12 @@ public class ReplayFileQueue {
     private static final int LOG_TIME_INDEX = 0;
     private static final int VXID_INDEX = 9;
     private static final int MESSAGE_INDEX = 13;
+    private static final int DETAIL_INDEX = 14;
     private static final String BEGIN_STRING = "BEGIN;";
     private static final String COMMIT_STRING = "COMMIT;";
     private static final String ABORT_STRING = "ABORT;";
     private static final String STATEMENT_MESSAGE_TYPE = "statement";
+    private static final String PARAMETERS_MESSAGE_TYPE = "parameters";
 
     private Queue<ReplayTransaction> queue;
     private CSVReader csvReader;
@@ -80,6 +85,8 @@ public class ReplayFileQueue {
                     // ignore any lines which are not SQL statements
                     continue;
                 }
+                String detailString = fields[DETAIL_INDEX];
+                List<Object> params = ReplayFileQueue.parseParamsFromDetail(detailString);
                 String vxid = fields[VXID_INDEX];
 
                 if (sqlString.equals(BEGIN_STRING)) {
@@ -103,11 +110,11 @@ public class ReplayFileQueue {
                     if (activeTransactions.containsKey(vxid)) {
                         // if it's in active transactions, it should be added to the corresponding explicit transaction
                         ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
-                        explicitReplayTransaction.addSQLStmtCall(sqlStmt, logTime);
+                        explicitReplayTransaction.addSQLStmtCall(sqlStmt, params, logTime);
                     } else {
                         // if it's not in active transactions, it must be an implicit transaction
                         ReplayTransaction implicitReplayTransaction = new ReplayTransaction(logTime, false);
-                        implicitReplayTransaction.addSQLStmtCall(sqlStmt, logTime);
+                        implicitReplayTransaction.addSQLStmtCall(sqlStmt, params, logTime);
                         queue.add(implicitReplayTransaction);
                     }
                 }
@@ -132,23 +139,105 @@ public class ReplayFileQueue {
      * SQL messages start with "statement: "
      * 
      * @param messageString The string in the "message" field of the log file
-     * @return A SQL string or null if the message is not a SQL messages
+     * @return A SQL string or null if the message is not a SQL message
      */
     private static String parseSQLFromMessage(String messageString) {
-        // DOTALL allows . to match newlines, which may be present in the SQL string
-        Pattern pattern = Pattern.compile("^(.*?): (.*?)$", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(messageString);
-        if (matcher.find()) {
-            String messageType = matcher.group(1);
-            String messageContent = matcher.group(2);
+        Pair<String, String> typeAndContent = ReplayFileQueue.splitTypeAndContent(messageString);
+        if (typeAndContent != null) {
+            String messageType = typeAndContent.first;
+            String messageContent = typeAndContent.second;
 
             if (messageType.equals(STATEMENT_MESSAGE_TYPE)) {
-                return messageContent;
+                String questionMarks = messageContent.replaceAll("\\$\\d+", "?");
+                return questionMarks;
             } else {
                 return null;
             }
         } else {
             // some messages don't follow the "[type]: [content]" format, so we ignore them completely
+            return null;
+        }
+    }
+
+    /**
+     * Parse SQL parameters from a raw "detail" string in a Postgres CSV log file
+     * 
+     * SQL parameter details start with "parameters: "
+     * This function assumes that all parameters in the detail string are listed in order ($1= comes before $2= as so on)
+     * We return an empty list so that it can be passed into Procedure.getPreparedStatement() safely
+     * 
+     * @param detailString The string in the "detail" field of the log file
+     * @return A SQL string or an empty list if the detail is not a SQL parameter detail
+     */
+    private static List<Object> parseParamsFromDetail(String detailString) {
+        List<Object> valuesList = new ArrayList<>();
+        Pair<String, String> typeAndContent = ReplayFileQueue.splitTypeAndContent(detailString);
+        
+        if (typeAndContent != null) {
+            String detailType = typeAndContent.first;
+            String detailContent = typeAndContent.second;
+
+            if (detailType.equals(PARAMETERS_MESSAGE_TYPE)) {
+                // Regular expression to match single-quoted values.
+                Pattern pattern = Pattern.compile("'(.*?)'");
+                Matcher matcher = pattern.matcher(detailContent);
+
+                while (matcher.find()) {
+                    valuesList.add(ReplayFileQueue.convertSQLLogStringToObject(matcher.group(1)));
+                }
+            }
+        }
+
+        return valuesList;
+    }
+
+    private static Object convertSQLLogStringToObject(String sqlLogString) {
+        // Check if the string is null or empty
+        if (sqlLogString == null || sqlLogString.isEmpty()) {
+            return null;
+        }
+    
+        // Check if the string represents an integer
+        try {
+            return Integer.parseInt(sqlLogString);
+        } catch (NumberFormatException e) {
+            // Not an integer
+        }
+    
+        // Check if the string represents a double
+        try {
+            return Double.parseDouble(sqlLogString);
+        } catch (NumberFormatException e) {
+            // Not a double
+        }
+    
+        // Check if the string is enclosed in single quotes, indicating a string
+        if (sqlLogString.startsWith("'") && sqlLogString.endsWith("'")) {
+            return sqlLogString.substring(1, sqlLogString.length() - 1);
+        }
+    
+        // If all else fails, return the string as-is
+        return sqlLogString;
+    }
+
+    /**
+     * Split a log string into "type" and "content"
+     * 
+     * The format is "[type]: [content]"
+     * Both "message" and "detail" strings are in the same format
+     * 
+     * @param logString A message or detail string
+     * @return The type and content if it follows the format, or a null if it doesn't
+     */
+    private static Pair<String, String> splitTypeAndContent(String logString) {
+        // DOTALL allows . to match newlines, which may be present in the SQL string
+        Pattern pattern = Pattern.compile("^(.*?): (.*?)$", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(logString);
+        if (matcher.find()) {
+            String type = matcher.group(1);
+            String content = matcher.group(2);
+            return Pair.of(type, content);
+        } else {
             return null;
         }
     }

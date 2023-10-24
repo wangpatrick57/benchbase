@@ -73,11 +73,13 @@ public class DynamicProcedure extends Procedure {
             }
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
+            PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());
+
             LocalDateTime nowDT = LocalDateTime.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String timestampAsString = nowDT.format(formatter);
-            System.out.printf("Executing %s at time %s\n", sqlStmt, timestampAsString);
-            PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
+            System.out.printf("Executing %s at time %s\n", preparedStatement, timestampAsString);
+
             preparedStatement.execute();
             replayTransaction.removeSQLStmtCall();
         }
