@@ -27,6 +27,7 @@ import com.oltpbenchmark.api.SQLStmt;
 public class ReplayFileQueue {
     private static final Logger LOG = LoggerFactory.getLogger(DBWorkload.class);
     private static final int LOG_TIME_INDEX = 0;
+    private static final int VXID_INDEX = 9;
     private static final int MESSAGE_INDEX = 13;
 
     private Queue<ReplayTransaction> queue;
@@ -52,6 +53,16 @@ public class ReplayFileQueue {
         String[] fields;
 
         try {
+            // TODO: ignore non-command lines
+            // TODO: SQL command parameters
+            // TODO: combine BEGIN -> COMMIT/ABORT into one transaction with time = latest timestamp. sort the queue by _first_ timestamp of the transaction
+
+            // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
+            // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
+            //  - XIDs don't work because (1) XIDs aren't even assigned to read-only transactions and (2) the XID wraparound issue means different transactions active at the same time may have the same XID
+            //  - VXIDs do work as they are (1) always assigned and (2) guaranteed to be unique amongst active transactions as they are used for locking
+            
+
             while ((fields = this.csvReader.readNext()) != null) {
                 // we parse the line in ReplayFileQueue instead of sending it to the constructor of ReplayTransaction
                 // because sometimes transactions are built from multiple lines

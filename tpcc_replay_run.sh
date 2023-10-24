@@ -6,7 +6,7 @@ PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/tpcc_log.csv"
 
 SKIP_BUILD=""
 
-if false; then
+if true; then
   # this if block creates tpcc_log.csv
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-c-l
   SKIP_BUILD="1"
