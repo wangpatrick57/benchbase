@@ -9,22 +9,24 @@
     <password>password</password>
     <isolation>TRANSACTION_SERIALIZABLE</isolation>
     <batchsize>128</batchsize>
+    <retries>1</retries> <!-- One retry is important or else we'll end up retrying transactions which aborted in the replay -->
 
     <!-- The workload -->
-    <!-- Terminals controls the # of workers. Increase this if the system cannot keep up with the replay file -->
+    <!-- Terminals controls the # of workers. Try increasing this if the system cannot keep up with the replay file -->
     <terminals>2</terminals>
     <works>
         <work>
             <replay>true</replay>
             <logfile>~/Documents/mastersStuff/dblab/postgres/simple_log.csv</logfile>
-            <!-- TODO: figure out how to not make the user specify this  -->
+
+            <!-- TODO: figure out how to not make the user specify rate and weights  -->
             <rate>1</rate>
             <weights>1</weights>
         </work>
     </works>
 
     <!-- Transaction types -->
-    <!-- TODO: figure out how to not make the user specify this  -->
+    <!-- TODO: figure out how to not make the user specify transactiontypes  -->
     <transactiontypes>
         <transactiontype>
             <name>DynamicProcedure</name>

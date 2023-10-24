@@ -81,7 +81,6 @@ public class ReplayFileQueue {
                     continue;
                 }
                 String vxid = fields[VXID_INDEX];
-                System.out.printf("sqlString=%s\n", sqlString);
 
                 if (sqlString.equals(BEGIN_STRING)) {
                     if (activeTransactions.containsKey(vxid)) {
@@ -96,7 +95,7 @@ public class ReplayFileQueue {
                         throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
                     }
                     ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
-                    explicitReplayTransaction.setShouldAbort(sqlString == ABORT_STRING);
+                    explicitReplayTransaction.setShouldAbort(sqlString.equals(ABORT_STRING));
                     activeTransactions.remove(vxid);
                 } else {
                     // this is the only scope in which where we need sqlStmt, so we instantiate it here instead of before the if

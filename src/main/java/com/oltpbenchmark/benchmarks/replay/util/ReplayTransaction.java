@@ -76,7 +76,7 @@ public class ReplayTransaction {
      * @pre If the transaction is explicit, setShouldAbort() has been called
      */
     public boolean getShouldAbort() {
-        if (!this.shouldAbort.isEmpty()) {
+        if (this.shouldAbort.isEmpty()) {
             throw new RuntimeException("getShouldAbort was called when shouldAbort is unknown");
         }
         return this.shouldAbort.get();
