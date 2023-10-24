@@ -3,6 +3,7 @@ package com.oltpbenchmark.benchmarks.replay;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.oltpbenchmark.DBWorkload;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
@@ -37,6 +38,9 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
     */
     @Override
     protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
+        if (DBWorkload.DEBUG) {
+            System.out.printf("entering ReplayWorker.executeWork\n");
+        }
         try {
             DynamicProcedure proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
             if (runArgs.isEmpty()) {

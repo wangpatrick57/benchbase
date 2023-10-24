@@ -3,9 +3,14 @@ package com.oltpbenchmark.benchmarks.replay.util;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -36,11 +41,9 @@ public class ReplayFileQueue {
     private static final int VXID_INDEX = 9;
     private static final int MESSAGE_INDEX = 13;
     private static final int DETAIL_INDEX = 14;
-    private static final String BEGIN_STRING = "BEGIN;";
-    private static final String COMMIT_STRING = "COMMIT;";
-    private static final String ABORT_STRING = "ABORT;";
-    private static final String STATEMENT_MESSAGE_TYPE = "statement";
-    private static final String PARAMETERS_MESSAGE_TYPE = "parameters";
+    private static final String BEGIN_REGEX = "BEGIN;?";
+    private static final String COMMIT_REGEX = "COMMIT;?";
+    private static final String ABORT_REGEX = "ABORT;?";
 
     private Queue<ReplayTransaction> queue;
     private CSVReader csvReader;
@@ -89,7 +92,7 @@ public class ReplayFileQueue {
                 List<Object> params = ReplayFileQueue.parseParamsFromDetail(detailString);
                 String vxid = fields[VXID_INDEX];
 
-                if (sqlString.equals(BEGIN_STRING)) {
+                if (sqlString.matches(BEGIN_REGEX)) {
                     if (activeTransactions.containsKey(vxid)) {
                         throw new RuntimeException("Found BEGIN for an already active transaction");
                     }
@@ -97,12 +100,12 @@ public class ReplayFileQueue {
                     activeTransactions.put(vxid, emptyExplicitReplayTransaction);
                     // in the queue, replay transactions are ordered by the time they first appear in the log file
                     queue.add(emptyExplicitReplayTransaction);
-                } else if (sqlString.equals(COMMIT_STRING) || sqlString.equals(ABORT_STRING)) {
+                } else if (sqlString.matches(COMMIT_REGEX) || sqlString.matches(ABORT_REGEX)) {
                     if (!activeTransactions.containsKey(vxid)) {
                         throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
                     }
                     ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
-                    explicitReplayTransaction.setShouldAbort(sqlString.equals(ABORT_STRING));
+                    explicitReplayTransaction.setShouldAbort(sqlString.matches(ABORT_REGEX));
                     activeTransactions.remove(vxid);
                 } else {
                     // this is the only scope in which where we need sqlStmt, so we instantiate it here instead of before the if
@@ -136,7 +139,7 @@ public class ReplayFileQueue {
     /**
      * Parse a SQL string from a raw "message" string in a Postgres CSV log file
      * 
-     * SQL messages start with "statement: "
+     * SQL messages start with "statement:" or "execute <[something]>:"
      * 
      * @param messageString The string in the "message" field of the log file
      * @return A SQL string or null if the message is not a SQL message
@@ -146,8 +149,10 @@ public class ReplayFileQueue {
         if (typeAndContent != null) {
             String messageType = typeAndContent.first;
             String messageContent = typeAndContent.second;
+            boolean typeIsStatement = messageType.equals("statement");
+            boolean typeIsExecute = messageType.matches("^execute .*$");
 
-            if (messageType.equals(STATEMENT_MESSAGE_TYPE)) {
+            if (typeIsStatement || typeIsExecute) {
                 String questionMarks = messageContent.replaceAll("\\$\\d+", "?");
                 return questionMarks;
             } else {
@@ -177,13 +182,13 @@ public class ReplayFileQueue {
             String detailType = typeAndContent.first;
             String detailContent = typeAndContent.second;
 
-            if (detailType.equals(PARAMETERS_MESSAGE_TYPE)) {
+            if (detailType.equals("parameters")) {
                 // Regular expression to match single-quoted values.
                 Pattern pattern = Pattern.compile("'(.*?)'");
                 Matcher matcher = pattern.matcher(detailContent);
 
                 while (matcher.find()) {
-                    valuesList.add(ReplayFileQueue.convertSQLLogStringToObject(matcher.group(1)));
+                    valuesList.add(ReplayFileQueue.parseSQLLogStringToObject(matcher.group(1)));
                 }
             }
         }
@@ -191,7 +196,7 @@ public class ReplayFileQueue {
         return valuesList;
     }
 
-    private static Object convertSQLLogStringToObject(String sqlLogString) {
+    private static Object parseSQLLogStringToObject(String sqlLogString) {
         // Check if the string is null or empty
         if (sqlLogString == null || sqlLogString.isEmpty()) {
             return null;
@@ -215,6 +220,18 @@ public class ReplayFileQueue {
         if (sqlLogString.startsWith("'") && sqlLogString.endsWith("'")) {
             return sqlLogString.substring(1, sqlLogString.length() - 1);
         }
+
+        // Check if the string represents a timestamp
+        try {
+            DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder();
+            formatterBuilder.appendPattern("yyyy-MM-dd HH:mm:ss");
+            formatterBuilder.appendFraction(ChronoField.MILLI_OF_SECOND, 0, 9, true);
+            DateTimeFormatter formatter = formatterBuilder.toFormatter();
+            LocalDateTime localDateTime = LocalDateTime.parse(sqlLogString, formatter);
+            return Timestamp.valueOf(localDateTime);
+        } catch (DateTimeParseException e) {
+            // Not a timestamp
+        }
     
         // If all else fails, return the string as-is
         return sqlLogString;
@@ -231,7 +248,7 @@ public class ReplayFileQueue {
      */
     private static Pair<String, String> splitTypeAndContent(String logString) {
         // DOTALL allows . to match newlines, which may be present in the SQL string
-        Pattern pattern = Pattern.compile("^(.*?): (.*?)$", Pattern.DOTALL);
+        Pattern pattern = Pattern.compile("^(.*?):\s+(.*?)$", Pattern.DOTALL);
         Matcher matcher = pattern.matcher(logString);
         if (matcher.find()) {
             String type = matcher.group(1);
@@ -270,6 +287,9 @@ public class ReplayFileQueue {
      * TODO: what does this do if we're at the end of the file?
      */
     public void remove() {
+        if (DBWorkload.DEBUG) {
+            System.out.println("Entering RFQ.remove");
+        }
         synchronized (this) {
             this.queue.remove();
         }

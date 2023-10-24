@@ -4,7 +4,7 @@
     <!-- Connection details -->
     <type>POSTGRES</type>
     <driver>org.postgresql.Driver</driver>
-    <url>jdbc:postgresql://localhost:5432/lab?sslmode=disable&amp;ApplicationName=replay&amp;reWriteBatchedInserts=true</url>
+    <url>jdbc:postgresql://localhost:5432/benchbase?sslmode=disable&amp;ApplicationName=replay&amp;reWriteBatchedInserts=true</url>
     <username>patrickwang</username>
     <password>password</password>
     <isolation>TRANSACTION_SERIALIZABLE</isolation>
@@ -13,11 +13,11 @@
 
     <!-- The workload -->
     <!-- Terminals controls the # of workers. Try increasing this if the system cannot keep up with the replay file -->
-    <terminals>2</terminals>
+    <terminals>4</terminals>
     <works>
         <work>
             <replay>true</replay>
-            <logfile>~/Documents/mastersStuff/dblab/postgres/simple_log.csv</logfile>
+            <logfile>~/Documents/mastersStuff/dblab/postgres/tpcc_log_short.csv</logfile>
 
             <!-- TODO: figure out how to not make the user specify rate and weights  -->
             <rate>1</rate>

@@ -48,6 +48,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 public class DBWorkload {
+    public static final boolean DEBUG = false;
     private static final Logger LOG = LoggerFactory.getLogger(DBWorkload.class);
 
     private static final String SINGLE_LINE = StringUtil.repeat("=", 70);

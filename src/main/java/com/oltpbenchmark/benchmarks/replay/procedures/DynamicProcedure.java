@@ -28,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.oltpbenchmark.DBWorkload;
 import com.oltpbenchmark.api.Procedure;
 
  /**
@@ -42,7 +43,9 @@ public class DynamicProcedure extends Procedure {
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);
 
     public void run(Connection conn, ReplayTransaction replayTransaction) throws SQLException {
-        System.out.printf("Entering DynamicProcedure.run() for %d statements\n", replayTransaction.getSQLStmtCallCount());
+        if (DBWorkload.DEBUG) {
+            System.out.printf("Entering DynamicProcedure.run() for %d statements\n", replayTransaction.getSQLStmtCallCount());
+        }
 
         // I chose to replay statements within a transaction relative to when we entered _this function_
         // instead of relative to when the entire replay started. This way, if the ReplayTransaction was
@@ -78,7 +81,9 @@ public class DynamicProcedure extends Procedure {
             LocalDateTime nowDT = LocalDateTime.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String timestampAsString = nowDT.format(formatter);
-            System.out.printf("Executing %s at time %s\n", preparedStatement, timestampAsString);
+            if (DBWorkload.DEBUG) {
+                System.out.printf("Executing %s at time %s\n", preparedStatement, timestampAsString);
+            }
 
             preparedStatement.execute();
             replayTransaction.removeSQLStmtCall();

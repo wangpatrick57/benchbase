@@ -93,7 +93,7 @@ public class Phase {
             Optional<ReplayTransaction> replayTransaction = this.replayFileQueue.peek();
             
             if (replayTransaction.isEmpty()) {
-                // this means the replay file is empty. we can just set replayOffsetNs to an arbitrary value since the phase will be skipped
+                // this means the replay file is empty. we can just set replayOffsetNs to an arbitrary value since this replay phase will be skipped anyways
                 this.replayOffsetNs = 0;
             } else {
                 long firstLogTime = replayTransaction.get().getFirstLogTime();
@@ -200,7 +200,9 @@ public class Phase {
             // return false as a safe value
             return false;
         } else {
-            return this.getReplayTime(replayTransactionOpt.get().getFirstLogTime()) <= System.nanoTime();
+            long now = System.nanoTime();
+            long replayTime = this.getReplayTime(replayTransactionOpt.get().getFirstLogTime());
+            return replayTime <= now;
         }
     }
 
@@ -231,7 +233,8 @@ public class Phase {
         if (replayTransaction.isEmpty()) {
             LOG.warn("In replay phases, getNextReplayTransactionTimestamp() should only be called if there are more replay transactions");
             // return the current time as a safe value
-            return System.nanoTime();
+            // I add a 100ms wait so the while loop in ThreadBench doesn't get called too many times in quick succession
+            return System.nanoTime() + 100000000;
         } else {
             return this.getReplayTime(replayTransaction.get().getFirstLogTime());
         }
@@ -248,7 +251,7 @@ public class Phase {
 
     /**
      * Generates the next submitted procedure for this phase
-     * May block if ReplayFileQueue blocks.
+     * In replay phases, it may block if ReplayFileQueue blocks.
      * @return The next SubmittedProcedure to run for this phase
      */
     public SubmittedProcedure generateSubmittedProcedure() {
