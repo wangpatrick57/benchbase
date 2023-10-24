@@ -21,7 +21,9 @@
  import java.sql.Connection;
  import java.sql.PreparedStatement;
  import java.sql.SQLException;
- import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
  import java.util.stream.Collectors;
 
  import com.oltpbenchmark.api.Procedure;
@@ -40,6 +42,10 @@
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
             preparedStatement.execute();
         }
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String timestampAsString = now.format(formatter);
+        System.out.printf("Executed %s at time %s\n", sqlStmts.toString(), timestampAsString);
     }
 
     private static List<SQLStmt> convertArgumentsToSQLStmts(List<Object> runArgs) {
