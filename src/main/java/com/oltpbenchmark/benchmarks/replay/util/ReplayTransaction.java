@@ -43,6 +43,10 @@ public class ReplayTransaction {
         this.sqlStmtCalls.add(Pair.of(sqlStmt, callTime));
     }
 
+    public int getSQLStmtCallCount() {
+        return this.sqlStmtCalls.size();
+    }
+
     public boolean hasSQLStmtCall() {
         return !this.sqlStmtCalls.isEmpty();
     }

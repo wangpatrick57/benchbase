@@ -6,18 +6,14 @@ import java.io.FileReader;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.management.RuntimeErrorException;
 
 import com.opencsv.CSVReader;
 
@@ -36,9 +32,9 @@ public class ReplayFileQueue {
     private static final int LOG_TIME_INDEX = 0;
     private static final int VXID_INDEX = 9;
     private static final int MESSAGE_INDEX = 13;
-    private static final String BEGIN_STRING = "BEGIN";
-    private static final String COMMIT_STRING = "COMMIT";
-    private static final String ABORT_STRING = "ABORT";
+    private static final String BEGIN_STRING = "BEGIN;";
+    private static final String COMMIT_STRING = "COMMIT;";
+    private static final String ABORT_STRING = "ABORT;";
     private static final String STATEMENT_MESSAGE_TYPE = "statement";
 
     private Queue<ReplayTransaction> queue;
@@ -85,8 +81,9 @@ public class ReplayFileQueue {
                     continue;
                 }
                 String vxid = fields[VXID_INDEX];
+                System.out.printf("sqlString=%s\n", sqlString);
 
-                if (sqlString == BEGIN_STRING) {
+                if (sqlString.equals(BEGIN_STRING)) {
                     if (activeTransactions.containsKey(vxid)) {
                         throw new RuntimeException("Found BEGIN for an already active transaction");
                     }
@@ -94,7 +91,7 @@ public class ReplayFileQueue {
                     activeTransactions.put(vxid, emptyExplicitReplayTransaction);
                     // in the queue, replay transactions are ordered by the time they first appear in the log file
                     queue.add(emptyExplicitReplayTransaction);
-                } else if (sqlString == COMMIT_STRING || sqlString == ABORT_STRING) {
+                } else if (sqlString.equals(COMMIT_STRING) || sqlString.equals(ABORT_STRING)) {
                     if (!activeTransactions.containsKey(vxid)) {
                         throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
                     }

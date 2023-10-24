@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.TransactionStatus;
 
@@ -19,27 +20,44 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
     
     private static final Logger LOG = LoggerFactory.getLogger(ReplayWorker.class);
 
-     public ReplayWorker(ReplayBenchmark benchmarkModule, int id) {
-         super(benchmarkModule, id);
-     }
+    public ReplayWorker(ReplayBenchmark benchmarkModule, int id) {
+        super(benchmarkModule, id);
+    }
 
     /**
-     * If runArgs is empty this will be a NOOP. However, it is not recommended to call this with an empty runArgs since it incorrectly counts it as a successful transaction
+     * Execute DynamicProcedure.run() with the given runArgs
+     * 
+     * If runArgs is Optional.empty() this will be a NOOP. However, it is not recommended to call this
+     * with an empty runArgs since it affects the metrics.
+     * 
+     * @param conn The connection to use
+     * @param nextTransaction The transactionType
+     * @param runArgs Should be a list containing a single ReplayTransaction
+     * @pre The transactionType should be the one for a DynamicProcedure
     */
     @Override
     protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
-    try {
-        DynamicProcedure proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
-        if (runArgs.isEmpty()) {
-            LOG.warn("ReplayWorker.executeWork(): runArgs is empty");
-        } else {
-            proc.run(conn, runArgs.get());
+        try {
+            DynamicProcedure proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
+            if (runArgs.isEmpty()) {
+                LOG.warn("runArgs is empty");
+                return (TransactionStatus.UNKNOWN);
+            } else {
+                ReplayTransaction replayTransaction = ReplayWorker.castArguments(runArgs.get());
+                proc.run(conn, replayTransaction);
+                return (TransactionStatus.SUCCESS);
+            }
+        } catch (ClassCastException ex) {
+            //fail gracefully
+            LOG.error("We have been invoked with an INVALID transactionType?!", ex);
+            throw new RuntimeException("Bad transaction type = " + nextTransaction);
         }
-    } catch (ClassCastException ex) {
-        //fail gracefully
-        LOG.error("We have been invoked with an INVALID transactionType?!", ex);
-        throw new RuntimeException("Bad transaction type = " + nextTransaction);
     }
-        return (TransactionStatus.SUCCESS);
+
+    private static ReplayTransaction castArguments(List<Object> runArgs) {
+        if (runArgs.size() != 1) {
+            throw new RuntimeException("Only one argument should be passed to DynamicProcedure");
+        }
+        return (ReplayTransaction)runArgs.get(0);
     }
  }
