@@ -64,8 +64,8 @@ public class ReplayFileQueue {
         String[] fields;
 
         try {
-            // TODO: ignore non-command lines
             // TODO: SQL command parameters
+            // TODO: handle aborts
 
             // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
             // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
@@ -146,7 +146,7 @@ public class ReplayFileQueue {
             String messageType = matcher.group(1);
             String messageContent = matcher.group(2);
 
-            if (messageType == STATEMENT_MESSAGE_TYPE) {
+            if (messageType.equals(STATEMENT_MESSAGE_TYPE)) {
                 return messageContent;
             } else {
                 return null;
