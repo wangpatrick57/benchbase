@@ -96,8 +96,8 @@ public class Phase {
                 // this means the replay file is empty. we can just set replayOffsetNs to an arbitrary value since the phase will be skipped
                 this.replayOffsetNs = 0;
             } else {
-                long logStartTime = replayTransaction.get().getLogTime();
-                this.replayOffsetNs = replayStartTime - logStartTime;
+                long firstLogTime = replayTransaction.get().getFirstLogTime();
+                this.replayOffsetNs = replayStartTime - firstLogTime;
             }
         }
     }
@@ -200,7 +200,7 @@ public class Phase {
             // return false as a safe value
             return false;
         } else {
-            return this.getReplayTime(replayTransactionOpt.get().getLogTime()) <= System.nanoTime();
+            return this.getReplayTime(replayTransactionOpt.get().getFirstLogTime()) <= System.nanoTime();
         }
     }
 
@@ -218,7 +218,7 @@ public class Phase {
     }
 
     /**
-     * Get the timestamp the next replay transaction should be played at
+     * Get the timestamp the next ReplayTransaction should be dequeued at
      * @return The timestamp
      */
     public long getNextReplayTransactionTimestamp() {
@@ -233,12 +233,12 @@ public class Phase {
             // return the current time as a safe value
             return System.nanoTime();
         } else {
-            return this.getReplayTime(replayTransaction.get().getLogTime());
+            return this.getReplayTime(replayTransaction.get().getFirstLogTime());
         }
     }
 
     /**
-     * Given a log time, get the time the transaction should be replayed
+     * Given a log time, get the time the SQLStmt should be dequeued
      * @param logTime
      * @return The shifted replay time
      */
@@ -260,14 +260,14 @@ public class Phase {
 
         if (this.isReplay()) {
             synchronized (this) {
-                // since both peek() and pop() may be called for replayFileQueue, this chunk of code needs to be synchronized
+                // since peek() and remove() must be called atomically, this chunk of code needs to be synchronized
                 Optional<ReplayTransaction> replayTransactionOpt = this.replayFileQueue.peek();
                 if (replayTransactionOpt.isEmpty()) {
                     LOG.warn("In replay phases, generateSubmittedProcedure() should only be called if there are more replay transactions");
                     // runArgs being empty causes DynamicProcedure to just be a NOOP
                     runArgs = Optional.empty();
                 } else {
-                    this.replayFileQueue.pop();
+                    this.replayFileQueue.remove();
                     runArgs = Optional.of(new ArrayList<Object>());
                     runArgs.get().add(replayTransactionOpt.get());
                 }

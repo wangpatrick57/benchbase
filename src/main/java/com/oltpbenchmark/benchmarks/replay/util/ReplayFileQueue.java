@@ -7,11 +7,18 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.management.RuntimeErrorException;
+
 import com.opencsv.CSVReader;
 
 import org.slf4j.Logger;
@@ -29,6 +36,10 @@ public class ReplayFileQueue {
     private static final int LOG_TIME_INDEX = 0;
     private static final int VXID_INDEX = 9;
     private static final int MESSAGE_INDEX = 13;
+    private static final String BEGIN_STRING = "BEGIN";
+    private static final String COMMIT_STRING = "COMMIT";
+    private static final String ABORT_STRING = "ABORT";
+    private static final String STATEMENT_MESSAGE_TYPE = "statement";
 
     private Queue<ReplayTransaction> queue;
     private CSVReader csvReader;
@@ -55,13 +66,12 @@ public class ReplayFileQueue {
         try {
             // TODO: ignore non-command lines
             // TODO: SQL command parameters
-            // TODO: combine BEGIN -> COMMIT/ABORT into one transaction with time = latest timestamp. sort the queue by _first_ timestamp of the transaction
 
             // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
             // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
             //  - XIDs don't work because (1) XIDs aren't even assigned to read-only transactions and (2) the XID wraparound issue means different transactions active at the same time may have the same XID
             //  - VXIDs do work as they are (1) always assigned and (2) guaranteed to be unique amongst active transactions as they are used for locking
-            
+            Map<String, ReplayTransaction> activeTransactions = new HashMap<String, ReplayTransaction>();
 
             while ((fields = this.csvReader.readNext()) != null) {
                 // we parse the line in ReplayFileQueue instead of sending it to the constructor of ReplayTransaction
@@ -69,12 +79,42 @@ public class ReplayFileQueue {
                 String logTimeString = fields[LOG_TIME_INDEX];
                 long logTime = ReplayFileQueue.dtStringToNanoTime(logTimeString);
                 String messageString = fields[MESSAGE_INDEX];
-                String sqlString = messageString.replaceFirst("^[^:]*: ", "");
-                SQLStmt sqlStmt = new SQLStmt(sqlString);
-                List<SQLStmt> sqlStmts = new ArrayList<>();
-                sqlStmts.add(sqlStmt);
-                ReplayTransaction replayTransaction = new ReplayTransaction(sqlStmts, logTime);
-                queue.add(replayTransaction);
+                String sqlString = ReplayFileQueue.parseSQLFromMessage(messageString);
+                if (sqlString == null) {
+                    // ignore any lines which are not SQL statements
+                    continue;
+                }
+                String vxid = fields[VXID_INDEX];
+
+                if (sqlString == BEGIN_STRING) {
+                    if (activeTransactions.containsKey(vxid)) {
+                        throw new RuntimeException("Found BEGIN for an already active transaction");
+                    }
+                    ReplayTransaction emptyExplicitReplayTransaction = new ReplayTransaction(logTime, true);
+                    activeTransactions.put(vxid, emptyExplicitReplayTransaction);
+                    // in the queue, replay transactions are ordered by the time they first appear in the log file
+                    queue.add(emptyExplicitReplayTransaction);
+                } else if (sqlString == COMMIT_STRING || sqlString == ABORT_STRING) {
+                    if (!activeTransactions.containsKey(vxid)) {
+                        throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
+                    }
+                    ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
+                    explicitReplayTransaction.setShouldAbort(sqlString == ABORT_STRING);
+                    activeTransactions.remove(vxid);
+                } else {
+                    // this is the only scope in which where we need sqlStmt, so we instantiate it here instead of before the if
+                    SQLStmt sqlStmt = new SQLStmt(sqlString);
+                    if (activeTransactions.containsKey(vxid)) {
+                        // if it's in active transactions, it should be added to the corresponding explicit transaction
+                        ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
+                        explicitReplayTransaction.addSQLStmtCall(sqlStmt, logTime);
+                    } else {
+                        // if it's not in active transactions, it must be an implicit transaction
+                        ReplayTransaction implicitReplayTransaction = new ReplayTransaction(logTime, false);
+                        implicitReplayTransaction.addSQLStmtCall(sqlStmt, logTime);
+                        queue.add(implicitReplayTransaction);
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -89,6 +129,36 @@ public class ReplayFileQueue {
         long nanoseconds = instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
         return nanoseconds;        
     }
+
+    /**
+     * Parse a SQL string from a raw "message" string in a Postgres CSV log file
+     * 
+     * SQL messages start with "statement: "
+     * 
+     * @param messageString The string in the "message" field of the log file
+     * @return A SQL string or null if the message is not a SQL messages
+     */
+    private static String parseSQLFromMessage(String messageString) {
+        // DOTALL allows . to match newlines, which may be present in the SQL string
+        Pattern pattern = Pattern.compile("^(.*?): (.*?)$", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(messageString);
+        if (matcher.find()) {
+            String messageType = matcher.group(1);
+            String messageContent = matcher.group(2);
+
+            if (messageType == STATEMENT_MESSAGE_TYPE) {
+                return messageContent;
+            } else {
+                return null;
+            }
+        } else {
+            // some messages don't follow the "[type]: [content]" format, so we ignore them completely
+            return null;
+        }
+    }
+
+    // TODO: make the interfaces of all the queue classes consistent in terms of what peek and remove do
+    //       if the queue is empty
 
     /**
      * Return the "front" replay transaction
@@ -111,8 +181,10 @@ public class ReplayFileQueue {
      * Advance to the next replay transaction
      * 
      * Will block until there are buffered transactions or the end of the file is reached.
+     * 
+     * TODO: what does this do if we're at the end of the file?
      */
-    public void pop() {
+    public void remove() {
         synchronized (this) {
             this.queue.remove();
         }

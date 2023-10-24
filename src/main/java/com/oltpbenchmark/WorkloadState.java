@@ -74,7 +74,7 @@ private Phase currentPhase = null;
 
             if (currentPhase.isReplay()) {
                 // If the phase is a replay phase, ignore amount and add to the queue based on timestamp
-                while (currentPhase.isNextReplayTransactionInPast()) {
+                while (currentPhase.existsNextReplayTransaction() && currentPhase.isNextReplayTransactionInPast()) {
                     workQueue.add(currentPhase.generateSubmittedProcedure());
                     workAdded++;
                 }

@@ -39,13 +39,37 @@ import java.util.List;
  public class DynamicProcedure extends Procedure {
     public void run(Connection conn, List<Object> runArgs) throws SQLException {
         ReplayTransaction replayTransaction = DynamicProcedure.castArguments(runArgs);
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String timestampAsString = now.format(formatter);
-        System.out.printf("Executing %s at time %s\n", replayTransaction.getSQLStmts().toString(), timestampAsString);
-        for (SQLStmt sqlStmt : replayTransaction.getSQLStmts()) {
+        // I chose to replay statements within a transaction relative to when we entered _this function_
+        // instead of relative to when the entire replay started. This way, if the ReplayTransaction was
+        // delayed in the work queue, we avoid replaying a bunch of SQL statements in close succession
+        // at the start.
+        long transactionReplayStartTime = System.nanoTime();
+        while (replayTransaction.hasSQLStmtCall()) {
+            // sleep until the next SQLStmt call, which may be "don't sleep"
+            long thisCallLogTime = replayTransaction.peekCallTime();
+            long thisCallReplayTime = transactionReplayStartTime + (thisCallLogTime - replayTransaction.getFirstLogTime());
+            long now = System.nanoTime();
+            long diff = thisCallReplayTime - now;
+            while (diff > 0) { // this can wake early: sleep multiple times to avoid that
+                long ms = diff / 1000000;
+                diff = diff % 1000000;
+                try {
+                    Thread.sleep(ms, (int) diff);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                now = System.nanoTime();
+                diff = thisCallReplayTime - now;
+            }
+
+            SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
+            LocalDateTime nowDT = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String timestampAsString = nowDT.format(formatter);
+            System.out.printf("Executing %s at time %s\n", sqlStmt, timestampAsString);
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt);
             preparedStatement.execute();
+            replayTransaction.removeSQLStmtCall();
         }
     }
 
