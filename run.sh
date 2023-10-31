@@ -3,11 +3,11 @@ if [ "$#" -eq 0 ]; then
   echo "must pass at least one arg"
   exit 1
 elif [ "$1" == "tpcc-c-l" ]; then
-  EXEC_ARGS="-b tpcc -c config/postgres/sample_tpcc_config.xml --create=true --load=true"
+  EXEC_ARGS="-b tpcc -c /Users/patrickwang/Documents/mastersStuff/dblab/postgres/tpcc_config.xml --create=true --load=true"
 elif [ "$1" == "tpcc-exec" ]; then
-  EXEC_ARGS="-b tpcc -c config/postgres/sample_tpcc_config.xml --execute=true -jh histograms.json"
+  EXEC_ARGS="-b tpcc -c /Users/patrickwang/Documents/mastersStuff/dblab/postgres/tpcc_config.xml --execute=true -jh histograms.json"
 elif [ "$1" == "tpcc-c-l-e" ]; then
-  EXEC_ARGS="-b tpcc -c config/postgres/sample_tpcc_config.xml --create=true --load=true --execute=true -jh histograms.json"
+  EXEC_ARGS="-b tpcc -c /Users/patrickwang/Documents/mastersStuff/dblab/postgres/tpcc_config.xml --create=true --load=true --execute=true -jh histograms.json"
 elif [ "$1" == "replay" ]; then
   EXEC_ARGS="-b replay -c config/postgres/sample_replay_config.xml --execute=true -jh histograms.json"
 else
