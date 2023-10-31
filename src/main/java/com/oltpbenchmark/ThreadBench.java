@@ -204,11 +204,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                     phaseComplete = testState.getState() == State.LATENCY_COMPLETE;
                 } else if (phase.isUntimedReplay()) {
                     phaseComplete = !phase.existsNextReplayTransaction();
-                    if (DBWorkload.DEBUG) {
-                        if (phaseComplete) {
-                            System.out.printf("phaseComplete set to true at time %d\n", System.nanoTime());
-                        }
-                    }
                 } else {
                     phaseComplete = testState.getState() == State.MEASURE
                             && (start + delta <= now);

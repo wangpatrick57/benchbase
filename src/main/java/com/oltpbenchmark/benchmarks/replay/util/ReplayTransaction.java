@@ -44,7 +44,7 @@ public class ReplayTransaction {
      * @pre shouldAbort has not already been set (either by the constructor or by this function)
      */
     public void setShouldAbort(boolean shouldAbort) {
-        if (!this.shouldAbort.isEmpty()) {
+        if (this.getIsShouldAbortSet()) {
             throw new RuntimeException("setShouldAbort should only be called if shouldAbort is not already set");
         }
         this.shouldAbort = Optional.of(shouldAbort);
@@ -94,7 +94,7 @@ public class ReplayTransaction {
      * @pre If the transaction is explicit, setShouldAbort() has been called
      */
     public boolean getShouldAbort() {
-        if (this.shouldAbort.isEmpty()) {
+        if (!this.getIsShouldAbortSet()) {
             throw new RuntimeException("getShouldAbort was called when shouldAbort is unknown");
         }
         return this.shouldAbort.get();
@@ -102,5 +102,9 @@ public class ReplayTransaction {
 
     public long getFirstLogTime() {
         return this.firstLogTime;
+    }
+
+    public boolean getIsShouldAbortSet() {
+        return !this.shouldAbort.isEmpty();
     }
 }

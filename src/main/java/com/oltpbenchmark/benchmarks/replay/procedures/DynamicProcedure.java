@@ -77,14 +77,7 @@ public class DynamicProcedure extends Procedure {
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());
-
-            LocalDateTime nowDT = LocalDateTime.now();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String timestampAsString = nowDT.format(formatter);
-            if (DBWorkload.DEBUG) {
-                System.out.printf("Executing %s at time %s\n", preparedStatement, timestampAsString);
-            }
-
+            DynamicProcedure.printPreparedStatement(preparedStatement);
             preparedStatement.execute();
             replayTransaction.removeSQLStmtCall();
         }
@@ -92,5 +85,24 @@ public class DynamicProcedure extends Procedure {
         if (replayTransaction.getShouldAbort()) {
             throw new UserAbortException("This transaction aborted in the replay file.");
         }
+    }
+
+    private static void printPreparedStatement(PreparedStatement preparedStatement) {
+        LocalDateTime nowDT = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String timestampAsString = nowDT.format(formatter);
+        String statementString = preparedStatement.toString();
+        String ANSI_BLUE = "\u001B[34m";
+        String ANSI_GREEN = "\u001B[32m";
+        String ANSI_MAGENTA = "\u001B[35m";
+        String ANSI_BOLD = "\u001B[1m";
+        String ANSI_RESET = "\u001B[0m";
+        String boldBlueSelect = ANSI_BOLD + ANSI_BLUE + "SELECT" + ANSI_RESET;
+        String boldGreenInsert = ANSI_BOLD + ANSI_GREEN + "INSERT" + ANSI_RESET;
+        String boldMagentaUpdate = ANSI_BOLD + ANSI_MAGENTA + "UPDATE" + ANSI_RESET;
+        statementString = statementString.replaceAll("SELECT", boldBlueSelect);
+        statementString = statementString.replaceAll("INSERT", boldGreenInsert);
+        statementString = statementString.replaceAll("UPDATE", boldMagentaUpdate);
+        System.out.printf("\nExecuting '''%s''' at time %s\n", statementString, timestampAsString);
     }
  }

@@ -122,6 +122,8 @@ public class ReplayFileQueue {
                     }
                 }
             }
+            // remove unfinished transactions
+            queue.removeIf(replayTransaction -> !replayTransaction.getIsShouldAbortSet());
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);

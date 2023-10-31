@@ -7,7 +7,7 @@ PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/tpcc_log.csv"
 SKIP_BUILD=""
 
 # generate log file
-if false; then
+if true; then
   # this if block creates tpcc_log.csv
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-c-l
   SKIP_BUILD="1"
@@ -23,6 +23,9 @@ if true; then
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-c-l # first, reset the database
   SKIP_BUILD="1" # if it was already 1, this is harmless
 fi
+
+# clean log file before running the replay
+rm "$(readlink $GEN_LOG_CSV_SPATH)"
 
 # run replay
 SKIP_BUILD=$SKIP_BUILD ./run.sh replay # then, run a replay
