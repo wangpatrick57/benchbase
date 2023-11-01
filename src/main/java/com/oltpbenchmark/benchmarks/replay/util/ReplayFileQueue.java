@@ -43,7 +43,7 @@ public class ReplayFileQueue {
     private static final int DETAIL_INDEX = 14;
     private static final String BEGIN_REGEX = "BEGIN;?";
     private static final String COMMIT_REGEX = "COMMIT;?";
-    private static final String ABORT_REGEX = "ABORT;?";
+    private static final String ABORT_REGEX = "(ABORT|ROLLBACK);?";
 
     private Queue<ReplayTransaction> queue;
     private CSVReader csvReader;
@@ -68,9 +68,6 @@ public class ReplayFileQueue {
         String[] fields;
 
         try {
-            // TODO: SQL command parameters
-            // TODO: handle aborts
-
             // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
             // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
             //  - XIDs don't work because (1) XIDs aren't even assigned to read-only transactions and (2) the XID wraparound issue means different transactions active at the same time may have the same XID
@@ -122,8 +119,12 @@ public class ReplayFileQueue {
                     }
                 }
             }
-            // remove unfinished transactions
+            int oldSize = queue.size();
             queue.removeIf(replayTransaction -> !replayTransaction.getIsShouldAbortSet());
+            int newSize = queue.size();
+            if (newSize < oldSize) {
+                LOG.warn("removed %d unfinished transactions", oldSize - newSize);
+            }
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);

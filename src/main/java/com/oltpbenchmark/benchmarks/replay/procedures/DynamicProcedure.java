@@ -77,7 +77,7 @@ public class DynamicProcedure extends Procedure {
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());
-            DynamicProcedure.printPreparedStatement(preparedStatement);
+            // DynamicProcedure.printPreparedStatement(preparedStatement);
             preparedStatement.execute();
             replayTransaction.removeSQLStmtCall();
         }
