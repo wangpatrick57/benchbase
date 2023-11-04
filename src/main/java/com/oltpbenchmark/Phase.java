@@ -43,12 +43,14 @@ public class Phase {
     private final int time;
     private final int warmupTime;
     private final double rate;
+    private final double replaySpeedup;
     private final Arrival arrival;
 
 
     private final boolean rateLimited;
     private final boolean disabled;
     private final boolean serial;
+    private final boolean replaySpeedupLimited;
     private final boolean replay;
     private final boolean timed;
     private final List<Double> weights;
@@ -60,17 +62,19 @@ public class Phase {
     private long replayOffsetNs;
 
 
-    Phase(String benchmarkName, int id, int t, int wt, double r, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replay, boolean timed, int activeTerminals, Arrival a, String logFilePath) {
+    Phase(String benchmarkName, int id, int t, int wt, double r, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupLimited, boolean replay, boolean timed, int activeTerminals, Arrival a, String replayFilePath) {
         this.benchmarkName = benchmarkName;
         this.id = id;
         this.time = t;
         this.warmupTime = wt;
         this.rate = r;
+        this.replaySpeedup = replaySpeedup;
         this.weights = weights;
         this.weightCount = this.weights.size();
         this.rateLimited = rateLimited;
         this.disabled = disabled;
         this.serial = serial;
+        this.replaySpeedupLimited = replaySpeedupLimited;
         this.replay = replay;
         this.timed = timed;
         this.nextSerial = 1;
@@ -78,7 +82,7 @@ public class Phase {
         this.arrival = a;
 
         if (this.isReplay()) {
-            this.replayFileQueue = new ReplayFileQueue(logFilePath);
+            this.replayFileQueue = new ReplayFileQueue(replayFilePath);
         }
     }
 
@@ -113,6 +117,10 @@ public class Phase {
 
     public boolean isSerial() {
         return serial;
+    }
+
+    public boolean isReplaySpeedupLimited() {
+        return replaySpeedupLimited;
     }
 
     public boolean isReplay() {
@@ -161,6 +169,10 @@ public class Phase {
 
     public double getRate() {
         return rate;
+    }
+
+    public double getReplaySpeedup() {
+        return replaySpeedup;
     }
 
     public Arrival getArrival() {

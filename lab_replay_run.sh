@@ -1,9 +1,9 @@
 #!/bin/bash
-DBLAB_POSTGRES_DPATH="$HOME/Documents/mastersStuff/dblab/postgres"
+. ./set_dblab_postgres_dpath.sh
 RESET_FPATH="$DBLAB_POSTGRES_DPATH/reset.sh"
 COMMANDS_FPATH="$DBLAB_POSTGRES_DPATH/commands.sql"
 GEN_LOG_CSV_SPATH="$DBLAB_POSTGRES_DPATH/postgresql.csv"
-PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/simple_log.csv"
+PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/lab_log.csv"
 
 if true; then
   "$RESET_FPATH"
@@ -11,7 +11,7 @@ if true; then
   mv $(readlink $GEN_LOG_CSV_SPATH) $PERMANENT_LOG_CSV_FPATH
 fi
 
-# [Invariant] simple_log.csv will be correctly set
+# [Invariant] lab_log.csv will be correctly set
 
 "$RESET_FPATH" # reset the database
-./run.sh replay # run a replay
+./run.sh lab-replay # run a replay

@@ -1,13 +1,5 @@
 #!/bin/bash
-OS_NAME=$(uname -s)
-if [ "$OS_NAME" == "Linux" ]; then
-  DBLAB_POSTGRES_DPATH="$HOME/dblab/d7pg"
-elif [ "$OS_NAME" == "Darwin" ]; then
-  DBLAB_POSTGRES_DPATH="$HOME/Documents/mastersStuff/dblab/m1pg"
-else
-  echo "OS_NAME $OS_NAME is unknown"
-  exit 1
-fi
+. ./set_dblab_postgres_dpath.sh
 GEN_LOG_CSV_SPATH="$DBLAB_POSTGRES_DPATH/postgresql.csv"
 PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/tpcc_log.csv"
 
@@ -37,5 +29,5 @@ if false; then
   rm "$(readlink $GEN_LOG_CSV_SPATH)"
 
   # run replay
-  SKIP_BUILD=$SKIP_BUILD ./run.sh replay # then, run a replay
+  SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-replay # then, run a replay
 fi

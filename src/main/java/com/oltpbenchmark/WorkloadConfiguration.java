@@ -148,8 +148,8 @@ public class WorkloadConfiguration {
         this.workloadState = new WorkloadState(benchmarkState, phases, terminals);
     }
 
-    public void addPhase(int id, int time, int warmup, double rate, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replay, boolean timed, int active_terminals, Phase.Arrival arrival, String logFilePath) {
-        phases.add(new Phase(benchmarkName, id, time, warmup, rate, weights, rateLimited, disabled, serial, replay, timed, active_terminals, arrival, logFilePath));
+    public void addPhase(int id, int time, int warmup, double rate, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupLimited, boolean replay, boolean timed, int active_terminals, Phase.Arrival arrival, String replayFilePath) {
+        phases.add(new Phase(benchmarkName, id, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupLimited, replay, timed, active_terminals, arrival, replayFilePath));
     }
 
     /**

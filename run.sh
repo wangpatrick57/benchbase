@@ -9,7 +9,8 @@ else
   exit 1
 fi
 TPCC_CONFIG_PATH="$DBLAB_POSTGRES_DPATH/tpcc_config.xml"
-REPLAY_CONFIG_PATH="$DBLAB_POSTGRES_DPATH/replay_config.xml"
+TPCC_REPLAY_CONFIG_PATH="$DBLAB_POSTGRES_DPATH/tpcc_replay_config.xml"
+LAB_REPLAY_CONFIG_PATH="$DBLAB_POSTGRES_DPATH/lab_replay_config.xml"
 
 if [ "$#" -eq 0 ]; then
   echo "must pass at least one arg"
@@ -20,8 +21,10 @@ elif [ "$1" == "tpcc-exec" ]; then
   EXEC_ARGS="-b tpcc -c $TPCC_CONFIG_PATH --execute=true"
 elif [ "$1" == "tpcc-c-l-e" ]; then
   EXEC_ARGS="-b tpcc -c $TPCC_CONFIG_PATH --create=true --load=true --execute=true"
-elif [ "$1" == "replay" ]; then
-  EXEC_ARGS="-b replay -c $REPLAY_CONFIG_PATH --execute=true"
+elif [ "$1" == "tpcc-replay" ]; then
+  EXEC_ARGS="-b replay -c $TPCC_REPLAY_CONFIG_PATH --execute=true"
+elif [ "$1" == "lab-replay" ]; then
+  EXEC_ARGS="-b replay -c $LAB_REPLAY_CONFIG_PATH --execute=true"
 else
   EXEC_ARGS="$@"
 fi

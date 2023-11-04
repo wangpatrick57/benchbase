@@ -55,6 +55,7 @@ public class DBWorkload {
 
     private static final String RATE_DISABLED = "disabled";
     private static final String RATE_UNLIMITED = "unlimited";
+    private static final String SPEEDUP_UNLIMITED = "unlimited";
 
     /**
      * @param args
@@ -321,10 +322,38 @@ public class DBWorkload {
 
                 // We now have the option of replaying queries from a log file
                 boolean replay = Boolean.parseBoolean(work.getString("replay", Boolean.FALSE.toString()));
-                String logFilePath = DBWorkload.expandTilde(work.getString("logfile", ""));
+                String replayFilePath = DBWorkload.expandTilde(work.getString("replayfile", ""));
+                boolean replaySpeedupLimited = true;
+                String replaySpeedupString = work.getString("replayspeedup", "");
+                double replaySpeedup = 1;
                 if (replay) {
-                    if (logFilePath == "") {
-                        LOG.error(String.format("Configuration error in work %d: " + "Phase is a replay phase but logfile is not specified", i));
+                    if (replayFilePath == "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is a replay phase but replayfile is not specified", i));
+                        System.exit(-1);
+                    }
+                    if (replaySpeedupString != "") {
+                        if (replaySpeedupString.equals(SPEEDUP_UNLIMITED)) {
+                            replaySpeedupLimited = false;
+                        } else {
+                            try {
+                                replaySpeedup = Double.parseDouble(replaySpeedupString);
+                                if (replaySpeedup <= 0) {
+                                    LOG.error("Speedup must be > 0.");
+                                    System.exit(-1);
+                                }
+                            } catch (NumberFormatException e) {
+                                LOG.error(String.format("Speedup must be '%s' or a number", SPEEDUP_UNLIMITED));
+                                System.exit(-1);
+                            }
+                        }
+                    }
+                } else {
+                    if (replayFilePath != "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is not a replay phase but replayfile is specified", i));
+                        System.exit(-1);
+                    }
+                    if (replaySpeedupString != "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is not a replay phase but speedup is specified", i));
                         System.exit(-1);
                     }
                 }
@@ -389,7 +418,7 @@ public class DBWorkload {
                 }
 
 
-                wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, replay, timed, activeTerminals, arrival, logFilePath);
+                wrkld.addPhase(i, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupLimited, replay, timed, activeTerminals, arrival, replayFilePath);
             }
 
             // CHECKING INPUT PHASES

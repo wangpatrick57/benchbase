@@ -55,12 +55,12 @@ public class ReplayFileQueue {
      * Prefetching is used to avoid this as much as possible, but if the rate of peek() and pop()
      * calls is higher than the maximum disk throughput, blocking is inevitable.
      */
-    public ReplayFileQueue(String logFilePath) {
+    public ReplayFileQueue(String replayFilePath) {
         try {
             // CSVReader handles CSV values which have newlines embedded in them
-            this.csvReader = new CSVReader(new BufferedReader(new FileReader(logFilePath)));
+            this.csvReader = new CSVReader(new BufferedReader(new FileReader(replayFilePath)));
         } catch (FileNotFoundException e) {
-            LOG.error("Log file " + logFilePath + " does not exist");
+            LOG.error("Replay file " + replayFilePath + " does not exist");
             System.exit(-1);
         }
         
