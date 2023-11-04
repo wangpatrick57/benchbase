@@ -9,24 +9,25 @@
     <password>password</password>
     <isolation>TRANSACTION_READ_COMMITTED</isolation>
     <batchsize>128</batchsize>
-    <retries>1</retries> <!-- One retry is important or else we'll end up retrying transactions which aborted in the replay -->
+    <!-- One retry is important or else we'll end up retrying transactions which aborted in the replay -->
+    <retries>1</retries>
 
     <!-- The workload -->
     <!-- Terminals controls the # of workers. Try increasing this if the system cannot keep up with the replay file -->
-    <terminals>30</terminals>
+    <terminals>1</terminals>
     <works>
         <work>
             <replay>true</replay>
             <logfile>~/Documents/mastersStuff/dblab/postgres/tpcc_log.csv</logfile>
 
-            <!-- TODO: figure out how to not make the user specify rate and weights  -->
+            <!-- Rate and weights are not used but need to be specified to not crash BenchBase -->
             <rate>1</rate>
             <weights>1</weights>
         </work>
     </works>
 
     <!-- Transaction types -->
-    <!-- TODO: figure out how to not make the user specify transactiontypes  -->
+    <!-- A DynamicProcedure executes an arbitrary list of SQL statements. It is the only transaction type we need -->
     <transactiontypes>
         <transactiontype>
             <name>DynamicProcedure</name>
