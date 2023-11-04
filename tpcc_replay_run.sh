@@ -31,6 +31,7 @@ if false; then
   SKIP_BUILD="1" # if it was already 1, this is harmless
 fi
 
+# run replay
 if false; then
   # clean log file before running the replay so that we can track that as well
   rm "$(readlink $GEN_LOG_CSV_SPATH)"
