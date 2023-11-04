@@ -13,6 +13,13 @@ public class ReplayTransaction {
         private List<Object> params;
         private long callTime;
 
+        /**
+         * A SQLStmtCall represents a single call of a SQL statement within a ReplayTransaction
+         * @param sqlStmt The statement that was called
+         * @param params The parameters it was called with. Should be an empty List if the SQL statement
+         *               is not parameterized
+         * @param callTime The timestamp, in nanoseconds, of this statement's line in the log file
+         */
         private SQLStmtCall(SQLStmt sqlStmt, List<Object> params, long callTime) {
             this.sqlStmt = sqlStmt;
             this.params = params;

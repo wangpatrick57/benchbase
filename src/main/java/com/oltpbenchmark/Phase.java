@@ -96,8 +96,9 @@ public class Phase {
                 // this means the replay file is empty. we can just set replayOffsetNs to an arbitrary value since this replay phase will be skipped anyways
                 this.replayOffsetNs = 0;
             } else {
-                long firstLogTime = replayTransaction.get().getFirstLogTime();
-                this.replayOffsetNs = replayStartTime - firstLogTime;
+                // it's the firstLogTime of the first ReplayTransaction, which is why there are two "firsts"
+                long firstFirstLogTime = replayTransaction.get().getFirstLogTime();
+                this.replayOffsetNs = replayStartTime - firstFirstLogTime;
             }
         }
     }
@@ -241,8 +242,8 @@ public class Phase {
     }
 
     /**
-     * Given a log time, get the time the SQLStmt should be dequeued
-     * @param logTime
+     * Given a log time, get the time the ReplayTransaction should be dequeued
+     * @param logTime The time the first line of the ReplayTransaction in the log file
      * @return The shifted replay time
      */
     private long getReplayTime(long logTime) {
