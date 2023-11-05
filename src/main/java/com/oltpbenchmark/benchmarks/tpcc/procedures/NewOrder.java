@@ -33,7 +33,17 @@ public class NewOrder extends TPCCProcedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(NewOrder.class);
 
-    public static long totalExecuteNs = 0;
+    public static long totalGetCustNs = 0;
+    public static long totalGetWhseNs = 0;
+    public static long totalGetDistNs = 0;
+    public static long totalInsertNewOrderNs = 0;
+    public static long totalUpdateDistNs = 0;
+    public static long totalInsertOOrderNs = 0;
+    public static long totalGetItemNs = 0;
+    public static long totalGetStockNs = 0;
+    public static long totalUpdateStockNs = 0;
+    public static long totalInsertOrderLineNs = 0;
+
 
     public final SQLStmt stmtGetCustSQL = new SQLStmt(
     """
@@ -217,13 +227,13 @@ public class NewOrder extends TPCCProcedure {
             stmtInsertOrderLine.executeBatch();
             long endTime = System.nanoTime();
             stmtInsertOrderLine.clearBatch();
-            totalExecuteNs += endTime - startTime;
+            totalInsertOrderLineNs += endTime - startTime;
 
             startTime = System.nanoTime();
             stmtUpdateStock.executeBatch();
             endTime = System.nanoTime();
             stmtUpdateStock.clearBatch();
-            totalExecuteNs += endTime - startTime;
+            totalUpdateStockNs += endTime - startTime;
         }
 
     }
@@ -251,7 +261,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             try (ResultSet rs = stmtGetStock.executeQuery()) {
                 long endTime = System.nanoTime();
-                totalExecuteNs += endTime - startTime;
+                totalGetStockNs += endTime - startTime;
                 if (!rs.next()) {
                     throw new RuntimeException("S_I_ID=" + ol_i_id + " not found!");
                 }
@@ -285,7 +295,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             try (ResultSet rs = stmtGetItem.executeQuery()) {
                 long endTime = System.nanoTime();
-                totalExecuteNs += endTime - startTime;
+                totalGetItemNs += endTime - startTime;
                 if (!rs.next()) {
                     // This is (hopefully) an expected error: this is an expected new order rollback
                     throw new UserAbortException("EXPECTED new order rollback: I_ID=" + ol_i_id + " not found!");
@@ -304,7 +314,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             int result = stmtInsertNewOrder.executeUpdate();
             long endTime = System.nanoTime();
-            totalExecuteNs += endTime - startTime;
+            totalInsertNewOrderNs += endTime - startTime;
 
             if (result == 0) {
                 LOG.warn("new order not inserted");
@@ -325,7 +335,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             int result = stmtInsertOOrder.executeUpdate();
             long endTime = System.nanoTime();
-            totalExecuteNs += endTime - startTime;
+            totalInsertOOrderNs += endTime - startTime;
 
             if (result == 0) {
                 LOG.warn("open order not inserted");
@@ -340,7 +350,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             int result = stmtUpdateDist.executeUpdate();
             long endTime = System.nanoTime();
-            totalExecuteNs += endTime - startTime;
+            totalUpdateDistNs += endTime - startTime;
             if (result == 0) {
                 throw new RuntimeException("Error!! Cannot update next_order_id on district for D_ID=" + d_id + " D_W_ID=" + w_id);
             }
@@ -354,7 +364,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             try (ResultSet rs = stmtGetDist.executeQuery()) {
                 long endTime = System.nanoTime();
-                totalExecuteNs += endTime - startTime;
+                totalGetDistNs += endTime - startTime;
                 if (!rs.next()) {
                     throw new RuntimeException("D_ID=" + d_id + " D_W_ID=" + w_id + " not found!");
                 }
@@ -369,7 +379,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             try (ResultSet rs = stmtGetWhse.executeQuery()) {
                 long endTime = System.nanoTime();
-                totalExecuteNs += endTime - startTime;
+                totalGetWhseNs += endTime - startTime;
                 if (!rs.next()) {
                     throw new RuntimeException("W_ID=" + w_id + " not found!");
                 }
@@ -385,7 +395,7 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             try (ResultSet rs = stmtGetCust.executeQuery()) {
                 long endTime = System.nanoTime();
-                totalExecuteNs += endTime - startTime;
+                totalGetCustNs += endTime - startTime;
                 if (!rs.next()) {
                     throw new RuntimeException("C_D_ID=" + d_id + " C_ID=" + c_id + " not found!");
                 }

@@ -33,7 +33,6 @@ import java.util.List;
  * @author alendit
  */
 public class WorkloadState {
-    public static long totalFetchWorkNs = 0;
 
     private static final int RATE_QUEUE_LIMIT = 10000;
     private static final Logger LOG = LoggerFactory.getLogger(WorkloadState.class);
@@ -143,7 +142,6 @@ private Phase currentPhase = null;
         // Unlimited-rate and unlimited-replay-speedup phases don't use the work queue.
         if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupLimited())) {
             synchronized (this) {
-                long startTime = System.nanoTime();
                 // if we ran out of replay transactions in a replay run, don't return until the phase is over
                 if (!currentPhase.isReplaySpeedupLimited() && !currentPhase.existsNextReplayTransaction()) {
                     while (true) {
@@ -163,10 +161,7 @@ private Phase currentPhase = null;
                 // generateSubmittedProcedure() is inside "synchronized (this) {...}" because it function reads from a central queue
                 // for replay phases. if generateSubmittedProcedure() was outside "synchronized (this) {...}", it would be possible
                 // for generateSubmittedProcedure() to be called more times than the # of remaining items in the queue
-                SubmittedProcedure submittedProcedure = currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
-                long endTime = System.nanoTime();
-                totalFetchWorkNs += endTime - startTime;
-                return submittedProcedure;
+                return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
             }
         }
 
