@@ -217,6 +217,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             if ((phaseComplete || errorThrown) && !lastEntry) {
                 System.out.printf("NewOrder.totalInsertOrderLineNs=%d, NewOrder.totalUpdateStockNs=%d\n", NewOrder.totalInsertOrderLineNs, NewOrder.totalUpdateStockNs);
                 System.out.printf("DynamicProcedure.totalInsertOrderLineNs=%d, DynamicProcedure.totalUpdateStockNs=%d\n", DynamicProcedure.totalInsertOrderLineNs, DynamicProcedure.totalUpdateStockNs);
+                System.out.printf("WorkloadState.totalFetchWorkNs=%d\n", WorkloadState.totalFetchWorkNs);
 
                 // enters here after each phase of the test
                 // reset the queues so that the new phase is not affected by the

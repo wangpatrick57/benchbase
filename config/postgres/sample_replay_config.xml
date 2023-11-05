@@ -26,10 +26,10 @@
             <replay>true</replay>
             <!-- Absolute or relative path (relative to where BenchBase is executed). ~/ is handled -->
             <replayfile>~/benchbase/config/postgres/sample_tpcc_log.csv</replayfile>
+            <weights>100</weights>
 
-            <!-- Rate and weights are not used but need to be specified to not crash BenchBase -->
+            <!-- Rate is not used but need to be specified to not crash BenchBase -->
             <rate>1</rate>
-            <weights>1</weights>
         </work>
     </works>
 
