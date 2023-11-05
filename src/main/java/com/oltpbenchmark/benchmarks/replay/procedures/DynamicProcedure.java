@@ -42,8 +42,8 @@ public class DynamicProcedure extends Procedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);
 
-    // DynamicProcedure needs replaySpeedupLimited and replaySpeedup to know how to replay all SQLStmts in replayTransaction
-    public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupLimited, double replaySpeedup) throws SQLException {
+    // DynamicProcedure needs replaySpeedupFinite and replaySpeedup to know how to replay all SQLStmts in replayTransaction
+    public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupFinite, double replaySpeedup) throws SQLException {
         if (DBWorkload.DEBUG) {
             System.out.printf("Entering DynamicProcedure.run() for %d statements\n", replayTransaction.getSQLStmtCallCount());
         }
@@ -59,8 +59,8 @@ public class DynamicProcedure extends Procedure {
         }
 
         while (replayTransaction.hasSQLStmtCall()) {
-            if (replaySpeedupLimited) {
-                // if replaySpeedupLimited, sleep until the next SQLStmt call, which may be "don't sleep"
+            if (replaySpeedupFinite) {
+                // if replaySpeedupFinite, sleep until the next SQLStmt call, which may be "don't sleep"
                 long thisCallLogTime = replayTransaction.peekCallTime();
                 long thisCallReplayTime = transactionReplayStartTime + (thisCallLogTime - replayTransaction.getFirstLogTime());
                 long now = System.nanoTime();

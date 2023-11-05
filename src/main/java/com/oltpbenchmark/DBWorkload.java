@@ -55,7 +55,7 @@ public class DBWorkload {
 
     private static final String RATE_DISABLED = "disabled";
     private static final String RATE_UNLIMITED = "unlimited";
-    private static final String SPEEDUP_UNLIMITED = "unlimited";
+    private static final String REPLAY_SPEEDUP_INFINITE = "infinite";
 
     /**
      * @param args
@@ -323,7 +323,7 @@ public class DBWorkload {
                 // We now have the option of replaying queries from a log file
                 boolean replay = Boolean.parseBoolean(work.getString("replay", Boolean.FALSE.toString()));
                 String replayFilePath = DBWorkload.expandTilde(work.getString("replayfile", ""));
-                boolean replaySpeedupLimited = true;
+                boolean replaySpeedupFinite = true;
                 String replaySpeedupString = work.getString("replayspeedup", "");
                 double replaySpeedup = 1;
                 if (replay) {
@@ -332,8 +332,8 @@ public class DBWorkload {
                         System.exit(-1);
                     }
                     if (replaySpeedupString != "") {
-                        if (replaySpeedupString.equals(SPEEDUP_UNLIMITED)) {
-                            replaySpeedupLimited = false;
+                        if (replaySpeedupString.equals(REPLAY_SPEEDUP_INFINITE)) {
+                            replaySpeedupFinite = false;
                         } else {
                             try {
                                 replaySpeedup = Double.parseDouble(replaySpeedupString);
@@ -342,7 +342,7 @@ public class DBWorkload {
                                     System.exit(-1);
                                 }
                             } catch (NumberFormatException e) {
-                                LOG.error(String.format("Speedup must be '%s' or a number", SPEEDUP_UNLIMITED));
+                                LOG.error(String.format("Speedup must be '%s' or a number", REPLAY_SPEEDUP_INFINITE));
                                 System.exit(-1);
                             }
                         }
@@ -418,7 +418,7 @@ public class DBWorkload {
                 }
 
 
-                wrkld.addPhase(i, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupLimited, replay, timed, activeTerminals, arrival, replayFilePath);
+                wrkld.addPhase(i, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupFinite, replay, timed, activeTerminals, arrival, replayFilePath);
             }
 
             // CHECKING INPUT PHASES

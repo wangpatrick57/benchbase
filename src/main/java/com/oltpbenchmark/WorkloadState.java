@@ -72,7 +72,7 @@ private Phase currentPhase = null;
             // Only use the work queue if the phase is enabled, rate limited, and replay speedup limited.
             if (currentPhase == null || currentPhase.isDisabled()
                     || !currentPhase.isRateLimited() || currentPhase.isSerial()
-                    || !currentPhase.isReplaySpeedupLimited()) {
+                    || !currentPhase.isReplaySpeedupFinite()) {
                 return;
             }
 
@@ -139,10 +139,10 @@ private Phase currentPhase = null;
         }
 
         // Unlimited-rate and unlimited-replay-speedup phases don't use the work queue.
-        if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupLimited())) {
+        if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupFinite())) {
             synchronized (this) {
                 // if we ran out of replay transactions in a replay run, don't return until the phase is over
-                if (!currentPhase.isReplaySpeedupLimited() && !currentPhase.existsNextReplayTransaction()) {
+                if (!currentPhase.isReplaySpeedupFinite() && !currentPhase.existsNextReplayTransaction()) {
                     while (true) {
                         if (this.shouldFetchWorkExit()) {
                             return null;

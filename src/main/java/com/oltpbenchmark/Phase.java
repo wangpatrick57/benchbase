@@ -50,7 +50,7 @@ public class Phase {
     private final boolean rateLimited;
     private final boolean disabled;
     private final boolean serial;
-    private final boolean replaySpeedupLimited;
+    private final boolean replaySpeedupFinite;
     private final boolean replay;
     private final boolean timed;
     private final List<Double> weights;
@@ -62,7 +62,7 @@ public class Phase {
     private long replayOffsetNs;
 
 
-    Phase(String benchmarkName, int id, int t, int wt, double r, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupLimited, boolean replay, boolean timed, int activeTerminals, Arrival a, String replayFilePath) {
+    Phase(String benchmarkName, int id, int t, int wt, double r, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupFinite, boolean replay, boolean timed, int activeTerminals, Arrival a, String replayFilePath) {
         this.benchmarkName = benchmarkName;
         this.id = id;
         this.time = t;
@@ -74,7 +74,7 @@ public class Phase {
         this.rateLimited = rateLimited;
         this.disabled = disabled;
         this.serial = serial;
-        this.replaySpeedupLimited = replaySpeedupLimited;
+        this.replaySpeedupFinite = replaySpeedupFinite;
         this.replay = replay;
         this.timed = timed;
         this.nextSerial = 1;
@@ -119,8 +119,8 @@ public class Phase {
         return serial;
     }
 
-    public boolean isReplaySpeedupLimited() {
-        return replaySpeedupLimited;
+    public boolean isReplaySpeedupFinite() {
+        return replaySpeedupFinite;
     }
 
     public boolean isReplay() {
@@ -282,7 +282,7 @@ public class Phase {
                     this.replayFileQueue.remove();
                     runArgs = Optional.of(new ArrayList<Object>());
                     runArgs.get().add(replayTransactionOpt.get());
-                    runArgs.get().add(this.replaySpeedupLimited);
+                    runArgs.get().add(this.replaySpeedupFinite);
                     runArgs.get().add(this.replaySpeedup);
                 }
             }
