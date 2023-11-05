@@ -25,6 +25,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +44,7 @@ import com.oltpbenchmark.api.Procedure;
 public class DynamicProcedure extends Procedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);
-    public static long totalInsertOrderLineNs = 0;
-    public static long totalUpdateStockNs = 0;
+    public static long totalExecuteNs = 0;
 
     // DynamicProcedure needs replaySpeedupLimited and replaySpeedup to know how to replay all SQLStmts in replayTransaction
     public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupLimited, double replaySpeedup) throws SQLException {
@@ -62,7 +63,7 @@ public class DynamicProcedure extends Procedure {
         }
 
         while (replayTransaction.hasSQLStmtCall()) {
-            if (replaySpeedupLimited || false) {
+            if (replaySpeedupLimited || false) { // PAT DEBUG
                 // if replaySpeedupLimited, sleep until the next SQLStmt call, which may be "don't sleep"
                 long thisCallLogTime = replayTransaction.peekCallTime();
                 long thisCallReplayTime = transactionReplayStartTime + (long)((thisCallLogTime - replayTransaction.getFirstLogTime()) / replaySpeedup);
@@ -84,16 +85,10 @@ public class DynamicProcedure extends Procedure {
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());
             // DynamicProcedure.printPreparedStatement(preparedStatement);
-            preparedStatement.addBatch();
             long startTime = System.nanoTime();
-            preparedStatement.executeBatch();
+            executePreparedStatement(preparedStatement);
             long endTime = System.nanoTime();
-            preparedStatement.clearBatch();
-            if (preparedStatement.toString().contains("UPDATE " + TPCCConstants.TABLENAME_STOCK)) {
-                totalUpdateStockNs += endTime - startTime;
-            } else if (preparedStatement.toString().contains(TPCCConstants.TABLENAME_ORDERLINE)) {
-                totalInsertOrderLineNs += endTime - startTime;
-            }
+            totalExecuteNs += endTime - startTime;
             replayTransaction.removeSQLStmtCall();
         }
 
@@ -119,5 +114,37 @@ public class DynamicProcedure extends Procedure {
         statementString = statementString.replaceAll("INSERT", boldGreenInsert);
         statementString = statementString.replaceAll("UPDATE", boldMagentaUpdate);
         System.out.printf("\nExecuting '''%s''' at time %s\n", statementString, timestampAsString);
+    }
+
+    private static void executePreparedStatement(PreparedStatement preparedStatement) throws SQLException {
+        Pattern pattern = Pattern.compile("^\\s*([A-Za-z]+)\\s*");
+        String sqlString = preparedStatement.toString();
+        Matcher matcher = pattern.matcher(sqlString);
+
+        if (matcher.find()) {
+            String commandType = matcher.group(1).toLowerCase();
+
+            switch (commandType) {
+                case "select":
+                    preparedStatement.executeQuery();
+                    break;
+                case "update":
+                case "insert":
+                case "delete":
+                    preparedStatement.executeUpdate();
+                    break;
+                case "set":
+                case "show":
+                    preparedStatement.execute();
+                    break;
+                default:
+                    LOG.warn(String.format("Unknown commandType: %s", commandType));
+                    preparedStatement.execute();
+                    break;
+            }
+        } else {
+            LOG.warn(String.format("Could not parse commandType of %s", sqlString));
+            preparedStatement.execute();
+        }
     }
  }

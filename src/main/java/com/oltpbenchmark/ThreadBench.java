@@ -215,8 +215,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             // Go to next phase if this one is complete or enter if error was thrown
             boolean errorThrown = testState.getState() == State.ERROR;
             if ((phaseComplete || errorThrown) && !lastEntry) {
-                System.out.printf("NewOrder.totalInsertOrderLineNs=%d, NewOrder.totalUpdateStockNs=%d\n", NewOrder.totalInsertOrderLineNs, NewOrder.totalUpdateStockNs);
-                System.out.printf("DynamicProcedure.totalInsertOrderLineNs=%d, DynamicProcedure.totalUpdateStockNs=%d\n", DynamicProcedure.totalInsertOrderLineNs, DynamicProcedure.totalUpdateStockNs);
+                System.out.printf("NewOrder.totalExecuteNs=%d\n", NewOrder.totalExecuteNs);
+                System.out.printf("DynamicProcedure.totalExecuteNs=%d\n", DynamicProcedure.totalExecuteNs);
                 System.out.printf("WorkloadState.totalFetchWorkNs=%d\n", WorkloadState.totalFetchWorkNs);
 
                 // enters here after each phase of the test
