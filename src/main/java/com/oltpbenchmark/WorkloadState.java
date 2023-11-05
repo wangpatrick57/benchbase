@@ -156,8 +156,8 @@ private Phase currentPhase = null;
                     }
                 }
                 ++workersWorking;
+                return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
             }
-            return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
         }
 
         synchronized (this) {
