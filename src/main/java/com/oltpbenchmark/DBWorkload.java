@@ -393,7 +393,7 @@ public class DBWorkload {
                         LOG.info("Timer enabled for serial run; will run queries" + " serially in a loop until the timer expires.");
                     } else if (replay) {
                         LOG.info("Timer enabled for replay run; will run queries in the log file in a loop until the timer expires");
-                        throw new NotImplementedException("Timed replay runs are currently unimplemented");
+                        throw new NotImplementedException("Timed replay runs are not currently implemented");
                     }
                 }
                 if (warmup < 0) {

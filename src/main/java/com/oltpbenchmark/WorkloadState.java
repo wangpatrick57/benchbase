@@ -69,9 +69,10 @@ private Phase currentPhase = null;
                 workQueue.clear();
             }
 
-            // Only use the work queue if the phase is enabled and rate limited.
+            // Only use the work queue if the phase is enabled, rate limited, and replay speedup limited.
             if (currentPhase == null || currentPhase.isDisabled()
-                    || !currentPhase.isRateLimited() || currentPhase.isSerial()) {
+                    || !currentPhase.isRateLimited() || currentPhase.isSerial()
+                    || !currentPhase.isReplaySpeedupLimited()) {
                 return;
             }
 
@@ -137,9 +138,23 @@ private Phase currentPhase = null;
             }
         }
 
-        // Unlimited-rate phases don't use the work queue.
-        if (currentPhase != null && !currentPhase.isRateLimited()) {
+        // Unlimited-rate and unlimited-replay-speedup phases don't use the work queue.
+        if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupLimited())) {
             synchronized (this) {
+                // if we ran out of replay transactions in a replay run, don't return until the phase is over
+                if (!currentPhase.isReplaySpeedupLimited() && !currentPhase.existsNextReplayTransaction()) {
+                    while (true) {
+                        if (this.shouldFetchWorkExit()) {
+                            return null;
+                        }
+
+                        try {
+                            this.wait();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
                 ++workersWorking;
             }
             return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
@@ -150,8 +165,7 @@ private Phase currentPhase = null;
             if (workQueue.peek() == null) {
                 workersWaiting += 1;
                 while (workQueue.peek() == null) {
-                    if (this.benchmarkState.getState() == State.EXIT
-                            || this.benchmarkState.getState() == State.DONE) {
+                    if (this.shouldFetchWorkExit()) {
                         return null;
                     }
 
@@ -169,6 +183,10 @@ private Phase currentPhase = null;
 
             return workQueue.remove();
         }
+    }
+
+    public boolean shouldFetchWorkExit() {
+        return getGlobalState() == State.EXIT || getGlobalState() == State.DONE;
     }
 
     public void finishedWork() {

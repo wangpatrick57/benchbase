@@ -135,10 +135,6 @@ public class Phase {
         return !timed && serial;
     }
 
-    public boolean isUntimedReplay() {
-        return !timed && replay;
-    }
-
     public boolean isThroughputRun() {
         return !isLatencyRun();
     }
