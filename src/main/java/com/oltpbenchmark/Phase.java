@@ -59,7 +59,8 @@ public class Phase {
     private int nextSerial;
 
     private ReplayFileQueue replayFileQueue;
-    private long replayOffsetNs;
+    private long replayStartTime;
+    private long firstFirstLogTime;
 
 
     Phase(String benchmarkName, int id, int t, int wt, double r, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupLimited, boolean replay, boolean timed, int activeTerminals, Arrival a, String replayFilePath) {
@@ -93,16 +94,15 @@ public class Phase {
         this.resetSerial();
         if (this.isReplay()) {
             // mark the current time as the start of the replay, which is used to shift logged timestamps over
-            long replayStartTime = System.nanoTime();
+            this.replayStartTime = System.nanoTime();
             Optional<ReplayTransaction> replayTransaction = this.replayFileQueue.peek();
             
             if (replayTransaction.isEmpty()) {
-                // this means the replay file is empty. we can just set replayOffsetNs to an arbitrary value since this replay phase will be skipped anyways
-                this.replayOffsetNs = 0;
+                // this means the replay file is empty. we can just set firstFirstLogTime to an arbitrary value since this replay phase will be skipped anyways
+                this.firstFirstLogTime = 0;
             } else {
                 // it's the firstLogTime of the first ReplayTransaction, which is why there are two "firsts"
-                long firstFirstLogTime = replayTransaction.get().getFirstLogTime();
-                this.replayOffsetNs = replayStartTime - firstFirstLogTime;
+                this.firstFirstLogTime = replayTransaction.get().getFirstLogTime();
             }
         }
     }
@@ -255,7 +255,7 @@ public class Phase {
      * @return The shifted replay time
      */
     private long getReplayTime(long logTime) {
-        return logTime + this.replayOffsetNs;
+        return this.replayStartTime + (long)((logTime - firstFirstLogTime) / this.replaySpeedup);
     }
 
     /**

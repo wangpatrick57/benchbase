@@ -62,7 +62,7 @@ public class DynamicProcedure extends Procedure {
             if (replaySpeedupLimited) {
                 // if replaySpeedupLimited, sleep until the next SQLStmt call, which may be "don't sleep"
                 long thisCallLogTime = replayTransaction.peekCallTime();
-                long thisCallReplayTime = transactionReplayStartTime + (thisCallLogTime - replayTransaction.getFirstLogTime());
+                long thisCallReplayTime = transactionReplayStartTime + (long)((thisCallLogTime - replayTransaction.getFirstLogTime()) / replaySpeedup);
                 long now = System.nanoTime();
                 long diff = thisCallReplayTime - now;
                 while (diff > 0) { // this can wake early: sleep multiple times to avoid that
