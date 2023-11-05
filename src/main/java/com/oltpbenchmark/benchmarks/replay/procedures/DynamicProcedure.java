@@ -18,6 +18,7 @@ package com.oltpbenchmark.benchmarks.replay.procedures;
 
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
+import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -59,7 +60,7 @@ public class DynamicProcedure extends Procedure {
         }
 
         while (replayTransaction.hasSQLStmtCall()) {
-            if (replaySpeedupLimited) {
+            if (replaySpeedupLimited || false) {
                 // if replaySpeedupLimited, sleep until the next SQLStmt call, which may be "don't sleep"
                 long thisCallLogTime = replayTransaction.peekCallTime();
                 long thisCallReplayTime = transactionReplayStartTime + (long)((thisCallLogTime - replayTransaction.getFirstLogTime()) / replaySpeedup);
@@ -80,8 +81,15 @@ public class DynamicProcedure extends Procedure {
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());
-            DynamicProcedure.printPreparedStatement(preparedStatement);
-            preparedStatement.execute();
+            // DynamicProcedure.printPreparedStatement(preparedStatement);
+            preparedStatement.addBatch();
+            long startTime = System.nanoTime();
+            preparedStatement.executeBatch();
+            long endTime = System.nanoTime();
+            preparedStatement.clearBatch();
+            if (preparedStatement.toString().contains(TPCCConstants.TABLENAME_ORDERLINE)) {
+                System.out.printf("%d\n", endTime - startTime);
+            }
             replayTransaction.removeSQLStmtCall();
         }
 

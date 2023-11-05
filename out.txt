@@ -1,0 +1,1213 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< com.oltpbenchmark:benchbase >---------------------
+[INFO] Building BenchBase 2021-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:3.2.0:clean (default-clean) @ benchbase ---
+[INFO] Deleting /home/phw2/benchbase/target
+[INFO] 
+[INFO] --- git-commit-id-plugin:4.9.10:revision (get-the-git-infos) @ benchbase ---
+[INFO] dotGitDirectory /home/phw2/benchbase/.git
+[INFO] Collected git.build.user.name with value Patrick Wang
+[INFO] Collected git.build.user.email with value wang.patrick57@gmail.com
+[INFO] Collected git.branch with value replay-benchmark
+[INFO] Collected git.commit.id.describe with value 154cf41-dirty
+[INFO] Collected git.commit.id.describe-short with value 154cf41-dirty
+[INFO] Collected git.commit.id.full with value 154cf410669bef8c2e0ce32f38cf798dfabb0762
+[INFO] Collected git.commit.id.abbrev with value 154cf41
+[INFO] Collected git.dirty with value true
+[INFO] Collected git.commit.user.name with value Patrick Wang
+[INFO] Collected git.commit.user.email with value wang.patrick57@gmail.com
+[INFO] Collected git.commit.message.full with value measuring executeBatch time
+[INFO] Collected git.commit.message.short with value measuring executeBatch time
+[INFO] Collected git.commit.time with value 2023-11-05T13:58:27+0000
+[INFO] Collected git.commit.author.time with value 2023-11-05T13:58:27+0000
+[INFO] Collected git.commit.committer.time with value 2023-11-05T13:58:27+0000
+[INFO] Collected git.remote.origin.url with value git@github.com:wangpatrick57/benchbase.git
+[INFO] Collected git.tags with value 
+[INFO] Collected git.closest.tag.name with value 
+[INFO] Collected git.closest.tag.commit.count with value 
+[INFO] Collected git.total.commit.count with value 2200
+[INFO] Collected git.local.branch.ahead with value 0
+[INFO] Collected git.local.branch.behind with value 0
+[INFO] Collected git.build.time with value 2023-11-05T14:27:43+0000
+[INFO] Collected git.build.version with value 2021-SNAPSHOT
+[INFO] Collected git.build.host with value dev7
+[INFO] including property git.tags in results
+[INFO] including property git.build.version in results
+[INFO] including property git.branch in results
+[INFO] including property git.build.host in results
+[INFO] including property git.commit.user.email in results
+[INFO] including property git.local.branch.behind in results
+[INFO] including property git.commit.author.time in results
+[INFO] including property git.build.user.name in results
+[INFO] including property git.dirty in results
+[INFO] including property git.closest.tag.commit.count in results
+[INFO] including property git.commit.user.name in results
+[INFO] including property git.commit.id.abbrev in results
+[INFO] including property git.commit.id.describe-short in results
+[INFO] including property git.total.commit.count in results
+[INFO] including property git.commit.id.describe in results
+[INFO] including property git.build.user.email in results
+[INFO] including property git.commit.message.short in results
+[INFO] including property git.commit.committer.time in results
+[INFO] including property git.commit.id.full in results
+[INFO] including property git.closest.tag.name in results
+[INFO] including property git.local.branch.ahead in results
+[INFO] including property git.commit.time in results
+[INFO] including property git.build.time in results
+[INFO] including property git.commit.message.full in results
+[INFO] including property git.remote.origin.url in results
+[INFO] Writing properties file to [/home/phw2/benchbase/target/classes/git.properties] (for module BenchBase)...
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ benchbase ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 180 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ benchbase ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 383 source files with javac [debug target 17] to target/classes
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ benchbase ---
+[INFO] Not copying test resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.11.0:testCompile (default-testCompile) @ benchbase ---
+[INFO] Not compiling test sources
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ benchbase ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- maven-jar-plugin:3.3.0:jar (default-jar) @ benchbase ---
+[INFO] Building jar: /home/phw2/benchbase/target/benchbase-2021-SNAPSHOT-postgres.jar
+[INFO] 
+[INFO] --- maven-assembly-plugin:3.6.0:single (default) @ benchbase ---
+[INFO] Reading assembly descriptor: src/main/assembly/dir.xml
+[INFO] Copying files to /home/phw2/benchbase/target/benchbase-postgres
+[WARNING] Assembly file: /home/phw2/benchbase/target/benchbase-postgres is not a regular file (it may be a directory). It cannot be attached to the project build for installation or deployment.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  7.360 s
+[INFO] Finished at: 2023-11-05T14:27:49Z
+[INFO] ------------------------------------------------------------------------
+[INFO ] 2023-11-05 14:27:50,251 [main]  com.oltpbenchmark.DBWorkload main - ======================================================================
+
+Benchmark:              TPCC {com.oltpbenchmark.benchmarks.tpcc.TPCCBenchmark}
+Configuration:          /home/phw2/dblab/d7pg/tpcc_config.xml
+Type:                   POSTGRES
+Driver:                 org.postgresql.Driver
+URL:                    jdbc:postgresql://localhost:5432/benchbase?sslmode=disable&ApplicationName=tpcc&reWriteBatchedInserts=true
+Isolation:              TRANSACTION_READ_COMMITTED
+Batch Size:             128
+Scale Factor:           1.0
+Terminals:              1
+New Connection Per Txn: false
+
+[INFO ] 2023-11-05 14:27:50,253 [main]  com.oltpbenchmark.DBWorkload main - ======================================================================
+[INFO ] 2023-11-05 14:27:50,287 [main]  com.oltpbenchmark.DBWorkload main - Creating new TPCC database...
+[INFO ] 2023-11-05 14:27:50,522 [main]  com.oltpbenchmark.DBWorkload main - Finished creating new TPCC database...
+[INFO ] 2023-11-05 14:27:50,697 [main]  com.oltpbenchmark.DBWorkload main - Loading data into TPCC database...
+[INFO ] 2023-11-05 14:27:50,700 [main]  com.oltpbenchmark.util.ThreadUtil runLoaderThreads - Creating a Thread Pool with a size of 2 to run 2 Loader Threads.  0 threads will be queued.
+[INFO ] 2023-11-05 14:28:20,849 [main]  com.oltpbenchmark.util.ThreadUtil runLoaderThreads - Finished executing 2 Loader Threads [time=30.15s]
+[INFO ] 2023-11-05 14:28:20,850 [main]  com.oltpbenchmark.DBWorkload main - Finished loading data into TPCC database...
+[INFO ] 2023-11-05 14:28:20,850 [main]  com.oltpbenchmark.DBWorkload main - Skipping benchmark workload execution
+[INFO ] 2023-11-05 14:28:21,353 [main]  com.oltpbenchmark.DBWorkload main - ======================================================================
+
+Benchmark:              REPLAY {com.oltpbenchmark.benchmarks.replay.ReplayBenchmark}
+Configuration:          /home/phw2/dblab/d7pg/tpcc_replay_config.xml
+Type:                   POSTGRES
+Driver:                 org.postgresql.Driver
+URL:                    jdbc:postgresql://localhost:5432/benchbase?sslmode=disable&ApplicationName=replay&reWriteBatchedInserts=true
+Isolation:              TRANSACTION_READ_COMMITTED
+Batch Size:             128
+Scale Factor:           1.0
+Terminals:              1
+New Connection Per Txn: false
+
+[INFO ] 2023-11-05 14:28:21,354 [main]  com.oltpbenchmark.DBWorkload main - ======================================================================
+[INFO ] 2023-11-05 14:28:21,371 [main]  com.oltpbenchmark.DBWorkload main - Timer disabled for replay run; will execute all queries in the log file.
+[WARN ] 2023-11-05 14:28:21,371 [main]  com.oltpbenchmark.DBWorkload main - rounded weight [1] does not equal 100.  Original weight is [1.0]
+[INFO ] 2023-11-05 14:28:35,418 [main]  com.oltpbenchmark.DBWorkload runWorkload - Creating 1 virtual terminals...
+[INFO ] 2023-11-05 14:28:35,426 [main]  com.oltpbenchmark.DBWorkload runWorkload - Launching the REPLAY Benchmark with 1 Phase...
+[INFO ] 2023-11-05 14:28:35,430 [main]  com.oltpbenchmark.ThreadBench runRateLimitedMultiPhase - [0;1mPHASE START[0;0m :: [Workload=REPLAY] [Serial=false] [Time=0] [WarmupTime=0] [Rate=1.0] [Arrival=REGULAR] [Ratios=[1.0]] [ActiveWorkers=1]
+[INFO ] 2023-11-05 14:28:36,429 [main]  com.oltpbenchmark.ThreadBench runRateLimitedMultiPhase - [0;1mMEASURE[0;0m :: Warmup complete, starting measurements.
+1947212
+1334425
+8556572
+1304755
+437920
+297435
+422097
+458033
+224686
+305950
+310333
+234699
+538910
+269843
+303769
+564525
+208961
+390447
+282910
+604280
+1047259
+190283
+520110
+340505
+186674
+356818
+287986
+205591
+571743
+385525
+246438
+503215
+273815
+183288
+588926
+499691
+321790
+173420
+504244
+332348
+230362
+166856
+563425
+343620
+175489
+332180
+229144
+167084
+326264
+495856
+234693
+171234
+580449
+297913
+493778
+316835
+514286
+495325
+242618
+168756
+338334
+279229
+172762
+492197
+314960
+170811
+498650
+398519
+201934
+490702
+231028
+242971
+498785
+322523
+231450
+165557
+495914
+497519
+235825
+166010
+171548
+343318
+374720
+177375
+488609
+174449
+573290
+239134
+498591
+172509
+488158
+486289
+309989
+164210
+496361
+324782
+182691
+237415
+164461
+497904
+328366
+242223
+165489
+536780
+236581
+164881
+497815
+174304
+502898
+314912
+501015
+321673
+220687
+169276
+498455
+232113
+505478
+406327
+499286
+529514
+503468
+173372
+507924
+314603
+235444
+161991
+329567
+231157
+164865
+326917
+504373
+312303
+227732
+167332
+508392
+318438
+221053
+160927
+339416
+185682
+323762
+167018
+535419
+310822
+214639
+520132
+245660
+167951
+487142
+493920
+323558
+493499
+171315
+234065
+497817
+176001
+236134
+581628
+354624
+231501
+160525
+362661
+237784
+168982
+488885
+308879
+217449
+330298
+321860
+584314
+235546
+327002
+165013
+240882
+165858
+239288
+164847
+489421
+169436
+497911
+226652
+482824
+304105
+159318
+364795
+228713
+157427
+327748
+321943
+487025
+222577
+323410
+320187
+593087
+319825
+484073
+176627
+487230
+489567
+308153
+215836
+538151
+310031
+215030
+487815
+306360
+212226
+153786
+493578
+226841
+156968
+484751
+335184
+223620
+156889
+502834
+312627
+215210
+154463
+254519
+343172
+228968
+496559
+368009
+175096
+510272
+311283
+219918
+506597
+486214
+334280
+220913
+326592
+217470
+152789
+326505
+235470
+322701
+164089
+476738
+162899
+479065
+306576
+260805
+161188
+320058
+161127
+169078
+482029
+305513
+212016
+587696
+357019
+477480
+222632
+320368
+482947
+317985
+212563
+150233
+319020
+216793
+322909
+164165
+482769
+162742
+273183
+164231
+320110
+217537
+149498
+478550
+221507
+313220
+477452
+231173
+479069
+170051
+165105
+483116
+481225
+223438
+323954
+478590
+160955
+528764
+307138
+156777
+164490
+164390
+317639
+215673
+479748
+224343
+153635
+483333
+302652
+211743
+148481
+167371
+325328
+160765
+479996
+300794
+208295
+149991
+321462
+160243
+469295
+162456
+165213
+235985
+356408
+164929
+484957
+304409
+209892
+479383
+301772
+310596
+173637
+165343
+481621
+301260
+208085
+480857
+305584
+152901
+160239
+314633
+210710
+149276
+478025
+299276
+246622
+151170
+316703
+211873
+226242
+158405
+473134
+297351
+150002
+317852
+210806
+477383
+295780
+204125
+146109
+232171
+486345
+301048
+150630
+625147
+213215
+167899
+473820
+215041
+151400
+360156
+323827
+213545
+148082
+479580
+308392
+157295
+478206
+231433
+156006
+320947
+213863
+317178
+156752
+491491
+220257
+150111
+320212
+212799
+148495
+484912
+312595
+152013
+324415
+256555
+478315
+297217
+202789
+314793
+212228
+146620
+474347
+299532
+204711
+473857
+160593
+165248
+316433
+155877
+485311
+302731
+208260
+147846
+593724
+306863
+358542
+217438
+316946
+156207
+314134
+212698
+478928
+214895
+318311
+157261
+317582
+211959
+481069
+161391
+471980
+156051
+483398
+299118
+151264
+475041
+533538
+306721
+226474
+234230
+154738
+318917
+211450
+321590
+210909
+147071
+478584
+212052
+481983
+213381
+156448
+473556
+211923
+254547
+507827
+347812
+506710
+339919
+550615
+510321
+197690
+506377
+339094
+186730
+500519
+193551
+254403
+515790
+345344
+245533
+182548
+504507
+335418
+189932
+338344
+248226
+342531
+252328
+220283
+515381
+258758
+185202
+501767
+339798
+246771
+498828
+254441
+503143
+193853
+343499
+604057
+344999
+247569
+333630
+259562
+179364
+621709
+545384
+349198
+189581
+256062
+253860
+255152
+188223
+255154
+186905
+512985
+261259
+504073
+255561
+257818
+189534
+507507
+340509
+189102
+505518
+255842
+187572
+260143
+183914
+517082
+375059
+248831
+182439
+503808
+268033
+185247
+346454
+254669
+193489
+508444
+341270
+248977
+254594
+190029
+501638
+187266
+335649
+247367
+182273
+498937
+354704
+192760
+505626
+195106
+551891
+257046
+186204
+258890
+182015
+201052
+498803
+283103
+254047
+189007
+339288
+187921
+508249
+257079
+185420
+502129
+344603
+243595
+341587
+442762
+255276
+187811
+253995
+335587
+187319
+517207
+292585
+502026
+336666
+246293
+184273
+503171
+341991
+189859
+251235
+340723
+251806
+229778
+257621
+192904
+341424
+340029
+255860
+512492
+338369
+180406
+509433
+350762
+639827
+347039
+501448
+518589
+343377
+190641
+506178
+256390
+186510
+487822
+503233
+257823
+184090
+340761
+191014
+342700
+190272
+340643
+507880
+382145
+187103
+503641
+340036
+507536
+343370
+188708
+504662
+339229
+246186
+341602
+251388
+183677
+592630
+499363
+340607
+243470
+181950
+509711
+290951
+188463
+252468
+186199
+251879
+187854
+503644
+195869
+502308
+192556
+339001
+187129
+186333
+508728
+339387
+245957
+493440
+255223
+182941
+341426
+249611
+185223
+494982
+207429
+340645
+248604
+534135
+504270
+339021
+247102
+185166
+502136
+197768
+499262
+511454
+256519
+184292
+255960
+188150
+337917
+248728
+333529
+244141
+182610
+511712
+258076
+551789
+257257
+187263
+519754
+198086
+502256
+336888
+243373
+180764
+501032
+514122
+336667
+246856
+181044
+506754
+345198
+511049
+187004
+542455
+347978
+247016
+182041
+501237
+336053
+192481
+188393
+728041
+356247
+250274
+185595
+503007
+343874
+186599
+347947
+249285
+188160
+506537
+195345
+343997
+254550
+503664
+377238
+255598
+186893
+254338
+188761
+512688
+339719
+248211
+252613
+340781
+247739
+185094
+503753
+340276
+245855
+181500
+255656
+190906
+513559
+341521
+180768
+355754
+250790
+342120
+188689
+541959
+256612
+188063
+257794
+344108
+343880
+249833
+537066
+256306
+185442
+524227
+254290
+181407
+343013
+258454
+256448
+188343
+178828
+504869
+255775
+188854
+501483
+192586
+255251
+501253
+570660
+346956
+187736
+501238
+339169
+245883
+501424
+335277
+184706
+501657
+339916
+188023
+342000
+248604
+181425
+256987
+504437
+336364
+244676
+252758
+339179
+249167
+225721
+251925
+179680
+498267
+343560
+241214
+178939
+507924
+344562
+248114
+182007
+863956
+355780
+190849
+525317
+255717
+191634
+336878
+504818
+345776
+257233
+551347
+339418
+243542
+255983
+186283
+507275
+254679
+199562
+498124
+328459
+238288
+501213
+510053
+256469
+184906
+187606
+499642
+192285
+341529
+188215
+344210
+191997
+340299
+561722
+343462
+506933
+338250
+187416
+349470
+250579
+182881
+501962
+191571
+451812
+341604
+189622
+340603
+520065
+259816
+342258
+510876
+194620
+552644
+267966
+507513
+333413
+242561
+337776
+507015
+194124
+256657
+516976
+254536
+507068
+336299
+245807
+179312
+336759
+244391
+186990
+505380
+554722
+518500
+257427
+184565
+342705
+251095
+182638
+253852
+186923
+343298
+189810
+517688
+199162
+345983
+248539
+190469
+257144
+260780
+189938
+513575
+335785
+246418
+344661
+251003
+197922
+521133
+193270
+565407
+342054
+244418
+180768
+511757
+338580
+242714
+522009
+343579
+256396
+738640
+349775
+246645
+504725
+339055
+257385
+181699
+249910
+185851
+542259
+550115
+339557
+188266
+343602
+344494
+245342
+179248
+259742
+183115
+501269
+336966
+244630
+339641
+197115
+404279
+341576
+249526
+181134
+510820
+265835
+508471
+344526
+259314
+181122
+388560
+255626
+187672
+506312
+337853
+245100
+181085
+513315
+339398
+190086
+504571
+589831
+338430
+186671
+516257
+337613
+249033
+502607
+382864
+253747
+497256
+334774
+241412
+502086
+264207
+504456
+201331
+495720
+192500
+511030
+193041
+253701
+500401
+204630
+339897
+604526
+258155
+183049
+377103
+251018
+342490
+341199
+188402
+256965
+188752
+495781
+334784
+184340
+503950
+337484
+247025
+181388
+501307
+207005
+252283
+254460
+504467
+335576
+185883
+340438
+252955
+543881
+341373
+500502
+341081
+261798
+256875
+518844
+258297
+182071
+341715
+189458
+516247
+195482
+506879
+253609
+185356
+256071
+504885
+338487
+247230
+534738
+344894
+249000
+503348
+205987
+254834
+184765
+504291
+339447
+244830
+180104
+507666
+333231
+184480
+504958
+503504
+253804
+339754
+187197
+603915
+198609
+538531
+340060
+247924
+181878
+503817
+192459
+342992
+189784
+255628
+187373
+341642
+341536
+[INFO ] 2023-11-05 14:28:45,671 [main]  com.oltpbenchmark.ThreadBench runRateLimitedMultiPhase - [0;1mTERMINATE[0;0m :: Waiting for all terminals to finish ..
+[INFO ] 2023-11-05 14:28:45,673 [Thread-1]  com.oltpbenchmark.ThreadBench run - Starting WatchDogThread
+[INFO ] 2023-11-05 14:28:45,675 [main]  com.oltpbenchmark.DBWorkload runWorkload - ======================================================================
+[INFO ] 2023-11-05 14:28:45,675 [main]  com.oltpbenchmark.DBWorkload runWorkload - Rate limited reqs/s: Results(nanoSeconds=9241985051, measuredRequests=547) = 59.18641904109265 requests/sec (throughput), 58.86181345220183 requests/sec (goodput)
+[INFO ] 2023-11-05 14:28:45,704 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output Raw data into file: replay_2023-11-05_14-28-45.raw.csv
+[INFO ] 2023-11-05 14:28:45,721 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output samples into file: replay_2023-11-05_14-28-45.samples.csv
+[INFO ] 2023-11-05 14:28:45,724 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output summary data into file: replay_2023-11-05_14-28-45.summary.json
+[INFO ] 2023-11-05 14:28:45,732 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output DBMS parameters into file: replay_2023-11-05_14-28-45.params.json
+[INFO ] 2023-11-05 14:28:45,739 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output DBMS metrics into file: replay_2023-11-05_14-28-45.metrics.json
+[INFO ] 2023-11-05 14:28:45,745 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output benchmark config into file: replay_2023-11-05_14-28-45.config.xml
+[INFO ] 2023-11-05 14:28:45,797 [main]  com.oltpbenchmark.DBWorkload writeOutputs - Output results into file: replay_2023-11-05_14-28-45.results.csv with window size 5
+[INFO ] 2023-11-05 14:28:45,799 [main]  com.oltpbenchmark.DBWorkload writeHistograms - ======================================================================
+[INFO ] 2023-11-05 14:28:45,800 [main]  com.oltpbenchmark.DBWorkload writeHistograms - Workload Histograms:
+
+[0;1mCompleted Transactions:[0;0m
+com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure/01               [ 544] ********************************************************************************
+
+[0;1mAborted Transactions:[0;0m
+com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure/01               [   5] ********************************************************************************
+
+[0;1mRejected Transactions (Server Retry):[0;0m
+<EMPTY>
+
+[0;1mRejected Transactions (Retry Different):[0;0m
+<EMPTY>
+
+[0;1mUnexpected SQL Errors:[0;0m
+<EMPTY>
+
+[0;1mUnknown Status Transactions:[0;0m
+<EMPTY>
+
+
+[INFO ] 2023-11-05 14:28:45,800 [main]  com.oltpbenchmark.DBWorkload writeHistograms - ======================================================================

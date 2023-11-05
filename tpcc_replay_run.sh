@@ -6,11 +6,11 @@ PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/tpcc_log.csv"
 SKIP_BUILD=""
 
 # generate log file
-if true; then
+if false; then
   # this if block creates tpcc_log.csv
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-c-l
   SKIP_BUILD="1"
-  rm "$(readlink $GEN_LOG_CSV_SPATH)"
+  rm "$(readlink $GEN_LOG_CSV_SPATH)" # no -f since it should always exist (since logging needs to be turned on)
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-exec
   mv "$(readlink $GEN_LOG_CSV_SPATH)" $PERMANENT_LOG_CSV_FPATH
 fi
@@ -26,7 +26,7 @@ fi
 # run replay
 if true; then
   # clean log file before running the replay so that we can track that as well
-  rm "$(readlink $GEN_LOG_CSV_SPATH)"
+  rm -f "$(readlink $GEN_LOG_CSV_SPATH)" # -f since it won't exist if we didn't just generate the log file
 
   # run replay
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-replay # then, run a replay
