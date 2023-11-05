@@ -33,6 +33,9 @@ public class NewOrder extends TPCCProcedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(NewOrder.class);
 
+    public static long totalInsertOrderLineNs = 0;
+    public static long totalUpdateStockNs = 0;
+
     public final SQLStmt stmtGetCustSQL = new SQLStmt(
     """
         SELECT C_DISCOUNT, C_LAST, C_CREDIT
@@ -214,14 +217,14 @@ public class NewOrder extends TPCCProcedure {
             long startTime = System.nanoTime();
             stmtInsertOrderLine.executeBatch();
             long endTime = System.nanoTime();
-            System.out.printf("%d,%d\n", o_ol_cnt, endTime - startTime);
             stmtInsertOrderLine.clearBatch();
+            totalInsertOrderLineNs += endTime - startTime;
 
             startTime = System.nanoTime();
             stmtUpdateStock.executeBatch();
             endTime = System.nanoTime();
             stmtUpdateStock.clearBatch();
-
+            totalUpdateStockNs += endTime - startTime;
         }
 
     }

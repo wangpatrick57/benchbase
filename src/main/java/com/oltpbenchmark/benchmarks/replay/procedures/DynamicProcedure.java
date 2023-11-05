@@ -42,6 +42,8 @@ import com.oltpbenchmark.api.Procedure;
 public class DynamicProcedure extends Procedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);
+    public static long totalInsertOrderLineNs = 0;
+    public static long totalUpdateStockNs = 0;
 
     // DynamicProcedure needs replaySpeedupLimited and replaySpeedup to know how to replay all SQLStmts in replayTransaction
     public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupLimited, double replaySpeedup) throws SQLException {
@@ -87,8 +89,10 @@ public class DynamicProcedure extends Procedure {
             preparedStatement.executeBatch();
             long endTime = System.nanoTime();
             preparedStatement.clearBatch();
-            if (preparedStatement.toString().contains(TPCCConstants.TABLENAME_ORDERLINE)) {
-                System.out.printf("%d\n", endTime - startTime);
+            if (preparedStatement.toString().contains("UPDATE " + TPCCConstants.TABLENAME_STOCK)) {
+                totalUpdateStockNs += endTime - startTime;
+            } else if (preparedStatement.toString().contains(TPCCConstants.TABLENAME_ORDERLINE)) {
+                totalInsertOrderLineNs += endTime - startTime;
             }
             replayTransaction.removeSQLStmtCall();
         }

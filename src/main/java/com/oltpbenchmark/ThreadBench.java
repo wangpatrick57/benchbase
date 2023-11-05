@@ -21,6 +21,8 @@ import com.oltpbenchmark.LatencyRecord.Sample;
 import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.NewOrder;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.util.StringUtil;
 import org.apache.commons.collections4.map.ListOrderedMap;
@@ -213,6 +215,9 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             // Go to next phase if this one is complete or enter if error was thrown
             boolean errorThrown = testState.getState() == State.ERROR;
             if ((phaseComplete || errorThrown) && !lastEntry) {
+                System.out.printf("NewOrder.totalInsertOrderLineNs=%d, NewOrder.totalUpdateStockNs=%d\n", NewOrder.totalInsertOrderLineNs, NewOrder.totalUpdateStockNs);
+                System.out.printf("DynamicProcedure.totalInsertOrderLineNs=%d, DynamicProcedure.totalUpdateStockNs=%d\n", DynamicProcedure.totalInsertOrderLineNs, DynamicProcedure.totalUpdateStockNs);
+
                 // enters here after each phase of the test
                 // reset the queues so that the new phase is not affected by the
                 // queue of the previous one
