@@ -156,7 +156,8 @@ public class NewOrder extends TPCCProcedure {
             itemIDs[numItems - 1] = TPCCConfig.INVALID_ITEM_ID;
         }
 
-        newOrderTransaction(terminalWarehouseID, districtID, customerID, numItems, allLocal, itemIDs, supplierWarehouseIDs, orderQuantities, conn);
+        //newOrderTransaction(terminalWarehouseID, districtID, customerID, numItems, allLocal, itemIDs, supplierWarehouseIDs, orderQuantities, conn);
+        getCustomer(conn, terminalWarehouseID, districtID, customerID);
 
     }
 
