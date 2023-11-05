@@ -262,7 +262,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             // Compute the next interval
             // and how many messages to deliver
             if (phase != null) {
-                System.out.printf("lim: %b, speed: %f\n", phase.isReplaySpeedupLimited(), phase.getReplaySpeedup());
                 if (phase.isReplay()) {
                     // nextToAdd isn't used in replay phases
                     // nextInterval is simply the time of the next transaction

@@ -286,6 +286,8 @@ public class Phase {
                     this.replayFileQueue.remove();
                     runArgs = Optional.of(new ArrayList<Object>());
                     runArgs.get().add(replayTransactionOpt.get());
+                    runArgs.get().add(this.replaySpeedupLimited);
+                    runArgs.get().add(this.replaySpeedup);
                 }
             }
         }

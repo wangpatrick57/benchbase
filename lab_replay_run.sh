@@ -5,7 +5,8 @@ COMMANDS_FPATH="$DBLAB_POSTGRES_DPATH/commands.sql"
 GEN_LOG_CSV_SPATH="$DBLAB_POSTGRES_DPATH/postgresql.csv"
 PERMANENT_LOG_CSV_FPATH="$DBLAB_POSTGRES_DPATH/lab_log.csv"
 
-if true; then
+# generate log file
+if false; then
   "$RESET_FPATH"
   psql -d lab -a -f $COMMANDS_FPATH
   mv $(readlink $GEN_LOG_CSV_SPATH) $PERMANENT_LOG_CSV_FPATH

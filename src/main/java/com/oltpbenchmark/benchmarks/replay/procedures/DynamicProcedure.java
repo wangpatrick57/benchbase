@@ -42,7 +42,8 @@ public class DynamicProcedure extends Procedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);
 
-    public void run(Connection conn, ReplayTransaction replayTransaction) throws SQLException {
+    // DynamicProcedure needs replaySpeedupLimited and replaySpeedup to know how to replay all SQLStmts in replayTransaction
+    public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupLimited, double replaySpeedup) throws SQLException {
         if (DBWorkload.DEBUG) {
             System.out.printf("Entering DynamicProcedure.run() for %d statements\n", replayTransaction.getSQLStmtCallCount());
         }
@@ -58,22 +59,24 @@ public class DynamicProcedure extends Procedure {
         }
 
         while (replayTransaction.hasSQLStmtCall()) {
-            // sleep until the next SQLStmt call, which may be "don't sleep"
-            long thisCallLogTime = replayTransaction.peekCallTime();
-            long thisCallReplayTime = transactionReplayStartTime + (thisCallLogTime - replayTransaction.getFirstLogTime());
-            long now = System.nanoTime();
-            long diff = thisCallReplayTime - now;
-            while (diff > 0) { // this can wake early: sleep multiple times to avoid that
-                long ms = diff / 1000000;
-                diff = diff % 1000000;
-                try {
-                    Thread.sleep(ms, (int) diff);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+            //if (replaySpeedupLimited) {
+                // if replaySpeedupLimited, sleep until the next SQLStmt call, which may be "don't sleep"
+                long thisCallLogTime = replayTransaction.peekCallTime();
+                long thisCallReplayTime = transactionReplayStartTime + (thisCallLogTime - replayTransaction.getFirstLogTime());
+                long now = System.nanoTime();
+                long diff = thisCallReplayTime - now;
+                while (diff > 0) { // this can wake early: sleep multiple times to avoid that
+                    long ms = diff / 1000000;
+                    diff = diff % 1000000;
+                    try {
+                        Thread.sleep(ms, (int) diff);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    now = System.nanoTime();
+                    diff = thisCallReplayTime - now;
                 }
-                now = System.nanoTime();
-                diff = thisCallReplayTime - now;
-            }
+            //}
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());

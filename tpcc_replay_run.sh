@@ -18,13 +18,13 @@ fi
 # [Invariant] tpcc_log.csv will have the correct values
 
 # reset DB
-if false; then
+if true; then
   SKIP_BUILD=$SKIP_BUILD ./run.sh tpcc-c-l # first, reset the database
   SKIP_BUILD="1" # if it was already 1, this is harmless
 fi
 
 # run replay
-if false; then
+if true; then
   # clean log file before running the replay so that we can track that as well
   rm "$(readlink $GEN_LOG_CSV_SPATH)"
 

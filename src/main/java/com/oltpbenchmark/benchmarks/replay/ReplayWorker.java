@@ -37,31 +37,38 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
      * @pre The transactionType should be the one for a DynamicProcedure
     */
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException, RuntimeException {
         if (DBWorkload.DEBUG) {
             System.out.printf("entering ReplayWorker.executeWork\n");
         }
+
+        DynamicProcedure proc;
         try {
-            DynamicProcedure proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
-            if (runArgs.isEmpty()) {
-                LOG.warn("runArgs is empty");
-                return (TransactionStatus.UNKNOWN);
-            } else {
-                ReplayTransaction replayTransaction = ReplayWorker.castArguments(runArgs.get());
-                proc.run(conn, replayTransaction);
-                return (TransactionStatus.SUCCESS);
-            }
+            proc = (DynamicProcedure) this.getProcedure(nextTransaction.getProcedureClass());
         } catch (ClassCastException ex) {
-            //fail gracefully
             LOG.error("We have been invoked with an INVALID transactionType?!", ex);
             throw new RuntimeException("Bad transaction type = " + nextTransaction);
         }
-    }
 
-    private static ReplayTransaction castArguments(List<Object> runArgs) {
-        if (runArgs.size() != 1) {
-            throw new RuntimeException("Only one argument should be passed to DynamicProcedure");
+        if (runArgs.isEmpty()) {
+            LOG.warn("runArgs is empty");
+            return (TransactionStatus.UNKNOWN);
+        } else {
+            List<Object> runArgsList = runArgs.get();
+            if (runArgsList.size() != 3) {
+                LOG.error("Exactly three arguments should be passed to DynamicProcedure");
+                throw new RuntimeException("Exactly three arguments should be passed to DynamicProcedure");
+            }
+            try {
+                ReplayTransaction replayTransaction = (ReplayTransaction)runArgsList.get(0);
+                boolean replaySpeedupLimited = (boolean)runArgsList.get(1);
+                double replaySpeedup = (double)runArgsList.get(2);
+                proc.run(conn, replayTransaction, replaySpeedupLimited, replaySpeedup);
+                return (TransactionStatus.SUCCESS);
+            } catch (ClassCastException ex) {
+                LOG.error("runArgs not of the correct type");
+                throw new RuntimeException("runArgs not of the correct type");
+            }
         }
-        return (ReplayTransaction)runArgs.get(0);
     }
  }
