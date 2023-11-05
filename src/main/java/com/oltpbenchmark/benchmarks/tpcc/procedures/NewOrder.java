@@ -119,7 +119,7 @@ public class NewOrder extends TPCCProcedure {
         int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
         int customerID = TPCCUtil.getCustomerID(gen);
 
-        int numItems = TPCCUtil.randomNumber(5, 15, gen);
+        int numItems = TPCCUtil.randomNumber(1, 15, gen); // PAT DEBUG make initial 5 instead of 1
         int[] itemIDs = new int[numItems];
         int[] supplierWarehouseIDs = new int[numItems];
         int[] orderQuantities = new int[numItems];
@@ -211,10 +211,15 @@ public class NewOrder extends TPCCProcedure {
 
             }
 
+            long startTime = System.nanoTime();
             stmtInsertOrderLine.executeBatch();
+            long endTime = System.nanoTime();
+            System.out.printf("%d,%d\n", o_ol_cnt, endTime - startTime);
             stmtInsertOrderLine.clearBatch();
 
+            startTime = System.nanoTime();
             stmtUpdateStock.executeBatch();
+            endTime = System.nanoTime();
             stmtUpdateStock.clearBatch();
 
         }
