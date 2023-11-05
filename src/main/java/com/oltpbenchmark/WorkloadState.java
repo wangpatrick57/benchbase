@@ -72,7 +72,7 @@ private Phase currentPhase = null;
             // Only use the work queue if the phase is enabled, rate limited, and replay speedup limited.
             if (currentPhase == null || currentPhase.isDisabled()
                     || !currentPhase.isRateLimited() || currentPhase.isSerial()
-                    || !currentPhase.isReplaySpeedupFinite()) {
+                    || !currentPhase.isReplaySpeedupLimited()) {
                 return;
             }
 
@@ -139,10 +139,10 @@ private Phase currentPhase = null;
         }
 
         // Unlimited-rate and unlimited-replay-speedup phases don't use the work queue.
-        if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupFinite())) {
+        if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupLimited())) {
             synchronized (this) {
                 // if we ran out of replay transactions in a replay run, don't return until the phase is over
-                if (!currentPhase.isReplaySpeedupFinite() && !currentPhase.existsNextReplayTransaction()) {
+                if (!currentPhase.isReplaySpeedupLimited() && !currentPhase.existsNextReplayTransaction()) {
                     while (true) {
                         if (this.shouldFetchWorkExit()) {
                             return null;
@@ -156,6 +156,7 @@ private Phase currentPhase = null;
                     }
                 }
                 ++workersWorking;
+
                 // generateSubmittedProcedure() is inside "synchronized (this) {...}" because it function reads from a central queue
                 // for replay phases. if generateSubmittedProcedure() was outside "synchronized (this) {...}", it would be possible
                 // for generateSubmittedProcedure() to be called more times than the # of remaining items in the queue

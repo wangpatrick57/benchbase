@@ -61,9 +61,9 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
             }
             try {
                 ReplayTransaction replayTransaction = (ReplayTransaction)runArgsList.get(0);
-                boolean replaySpeedupFinite = (boolean)runArgsList.get(1);
+                boolean replaySpeedupLimited = (boolean)runArgsList.get(1);
                 double replaySpeedup = (double)runArgsList.get(2);
-                proc.run(conn, replayTransaction, replaySpeedupFinite, replaySpeedup);
+                proc.run(conn, replayTransaction, replaySpeedupLimited, replaySpeedup);
                 return (TransactionStatus.SUCCESS);
             } catch (ClassCastException ex) {
                 LOG.error("runArgs not of the correct type");
