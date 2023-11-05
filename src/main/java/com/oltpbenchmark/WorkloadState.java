@@ -156,6 +156,9 @@ private Phase currentPhase = null;
                     }
                 }
                 ++workersWorking;
+                // generateSubmittedProcedure() is inside "synchronized (this) {...}" because it function reads from a central queue
+                // for replay phases. if generateSubmittedProcedure() was outside "synchronized (this) {...}", it would be possible
+                // for generateSubmittedProcedure() to be called more times than the # of remaining items in the queue
                 return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
             }
         }
