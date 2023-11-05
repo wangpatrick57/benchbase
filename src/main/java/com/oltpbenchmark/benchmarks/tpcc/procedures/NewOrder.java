@@ -131,7 +131,7 @@ public class NewOrder extends TPCCProcedure {
         int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
         int customerID = TPCCUtil.getCustomerID(gen);
 
-        int numItems = TPCCUtil.randomNumber(1, 15, gen); // PAT DEBUG make initial 5 instead of 1
+        int numItems = TPCCUtil.randomNumber(5, 15, gen);
         int[] itemIDs = new int[numItems];
         int[] supplierWarehouseIDs = new int[numItems];
         int[] orderQuantities = new int[numItems];
@@ -178,10 +178,9 @@ public class NewOrder extends TPCCProcedure {
 
         insertNewOrder(conn, w_id, d_id, d_next_o_id);
 
-        try (PreparedStatement stmtUpdateStock = this.getPreparedStatement(conn, stmtUpdateStockSQL);
-             PreparedStatement stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
-
-            for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
+        for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
+            try (PreparedStatement stmtUpdateStock = this.getPreparedStatement(conn, stmtUpdateStockSQL);
+                PreparedStatement stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
                 int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
                 int ol_i_id = itemIDs[ol_number - 1];
                 int ol_quantity = orderQuantities[ol_number - 1];
@@ -204,7 +203,11 @@ public class NewOrder extends TPCCProcedure {
                 stmtInsertOrderLine.setInt(7, ol_quantity);
                 stmtInsertOrderLine.setDouble(8, ol_amount);
                 stmtInsertOrderLine.setString(9, ol_dist_info);
-                stmtInsertOrderLine.addBatch();
+                long startTime = System.nanoTime();
+                stmtInsertOrderLine.execute();
+                long endTime = System.nanoTime();
+                totalInsertOrderLineNs += endTime - startTime;
+                //stmtInsertOrderLine.addBatch();
 
                 int s_remote_cnt_increment;
 
@@ -219,22 +222,26 @@ public class NewOrder extends TPCCProcedure {
                 stmtUpdateStock.setInt(3, s_remote_cnt_increment);
                 stmtUpdateStock.setInt(4, ol_i_id);
                 stmtUpdateStock.setInt(5, ol_supply_w_id);
-                stmtUpdateStock.addBatch();
-
+                startTime = System.nanoTime();
+                stmtUpdateStock.execute();
+                endTime = System.nanoTime();
+                totalUpdateStockNs += endTime - startTime;
+                //stmtUpdateStock.addBatch();
             }
 
-            long startTime = System.nanoTime();
-            stmtInsertOrderLine.executeBatch();
-            long endTime = System.nanoTime();
-            stmtInsertOrderLine.clearBatch();
-            totalInsertOrderLineNs += endTime - startTime;
-
-            startTime = System.nanoTime();
-            stmtUpdateStock.executeBatch();
-            endTime = System.nanoTime();
-            stmtUpdateStock.clearBatch();
-            totalUpdateStockNs += endTime - startTime;
         }
+
+        // long startTime = System.nanoTime();
+        // stmtInsertOrderLine.executeBatch();
+        // long endTime = System.nanoTime();
+        // stmtInsertOrderLine.clearBatch();
+        // totalInsertOrderLineNs += endTime - startTime;
+
+        // startTime = System.nanoTime();
+        // stmtUpdateStock.executeBatch();
+        // endTime = System.nanoTime();
+        // stmtUpdateStock.clearBatch();
+        // totalUpdateStockNs += endTime - startTime;
 
     }
 
