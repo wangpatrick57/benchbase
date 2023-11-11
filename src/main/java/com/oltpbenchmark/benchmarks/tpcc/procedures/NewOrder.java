@@ -33,7 +33,6 @@ public class NewOrder extends TPCCProcedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(NewOrder.class);
 
-
     public final SQLStmt stmtGetCustSQL = new SQLStmt(
     """
         SELECT C_DISCOUNT, C_LAST, C_CREDIT
@@ -168,7 +167,7 @@ public class NewOrder extends TPCCProcedure {
         insertNewOrder(conn, w_id, d_id, d_next_o_id);
 
         try (PreparedStatement stmtUpdateStock = this.getPreparedStatement(conn, stmtUpdateStockSQL);
-            PreparedStatement stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
+             PreparedStatement stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
 
             for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
                 int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
@@ -208,8 +207,8 @@ public class NewOrder extends TPCCProcedure {
                 stmtUpdateStock.setInt(3, s_remote_cnt_increment);
                 stmtUpdateStock.setInt(4, ol_i_id);
                 stmtUpdateStock.setInt(5, ol_supply_w_id);
-                stmtUpdateStock.execute();
                 stmtUpdateStock.addBatch();
+
             }
 
             stmtInsertOrderLine.executeBatch();
@@ -217,6 +216,7 @@ public class NewOrder extends TPCCProcedure {
 
             stmtUpdateStock.executeBatch();
             stmtUpdateStock.clearBatch();
+            
         }
 
     }

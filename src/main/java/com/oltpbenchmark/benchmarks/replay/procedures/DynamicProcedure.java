@@ -18,7 +18,6 @@ package com.oltpbenchmark.benchmarks.replay.procedures;
 
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
-import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -62,7 +61,7 @@ public class DynamicProcedure extends Procedure {
         }
 
         while (replayTransaction.hasSQLStmtCall()) {
-            if (replaySpeedupLimited || false) { // PAT DEBUG
+            if (replaySpeedupLimited) {
                 // if replaySpeedupLimited, sleep until the next SQLStmt call, which may be "don't sleep"
                 long thisCallLogTime = replayTransaction.peekCallTime();
                 long thisCallReplayTime = transactionReplayStartTime + (long)((thisCallLogTime - replayTransaction.getFirstLogTime()) / replaySpeedup);
@@ -112,37 +111,5 @@ public class DynamicProcedure extends Procedure {
         statementString = statementString.replaceAll("INSERT", boldGreenInsert);
         statementString = statementString.replaceAll("UPDATE", boldMagentaUpdate);
         System.out.printf("\nExecuting '''%s''' at time %s\n", statementString, timestampAsString);
-    }
-
-    private static void executePreparedStatement(PreparedStatement preparedStatement) throws SQLException {
-        Pattern pattern = Pattern.compile("^\\s*([A-Za-z]+)\\s*");
-        String sqlString = preparedStatement.toString();
-        Matcher matcher = pattern.matcher(sqlString);
-
-        if (matcher.find()) {
-            String commandType = matcher.group(1).toLowerCase();
-
-            switch (commandType) {
-                case "select":
-                    preparedStatement.executeQuery();
-                    break;
-                case "update":
-                case "insert":
-                case "delete":
-                    preparedStatement.executeUpdate();
-                    break;
-                case "set":
-                case "show":
-                    preparedStatement.execute();
-                    break;
-                default:
-                    LOG.warn(String.format("Unknown commandType: %s", commandType));
-                    preparedStatement.execute();
-                    break;
-            }
-        } else {
-            LOG.warn(String.format("Could not parse commandType of %s", sqlString));
-            preparedStatement.execute();
-        }
     }
  }

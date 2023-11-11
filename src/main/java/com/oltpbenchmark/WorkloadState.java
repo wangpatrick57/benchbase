@@ -33,7 +33,6 @@ import java.util.List;
  * @author alendit
  */
 public class WorkloadState {
-
     private static final int RATE_QUEUE_LIMIT = 10000;
     private static final Logger LOG = LoggerFactory.getLogger(WorkloadState.class);
 
