@@ -56,8 +56,8 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
         } else {
             List<Object> runArgsList = runArgs.get();
             if (runArgsList.size() != 3) {
-                LOG.error("Exactly three arguments should be passed to DynamicProcedure");
-                throw new RuntimeException("Exactly three arguments should be passed to DynamicProcedure");
+                LOG.error("Exactly three runArgs should be passed to DynamicProcedure");
+                throw new RuntimeException("Exactly three runArgs should be passed to DynamicProcedure");
             }
             try {
                 ReplayTransaction replayTransaction = (ReplayTransaction)runArgsList.get(0);

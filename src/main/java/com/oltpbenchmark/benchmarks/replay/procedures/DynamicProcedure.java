@@ -44,17 +44,6 @@ import com.oltpbenchmark.api.Procedure;
 public class DynamicProcedure extends Procedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);
-    
-    public static long totalGetCustNs = 0;
-    public static long totalGetWhseNs = 0;
-    public static long totalGetDistNs = 0;
-    public static long totalInsertNewOrderNs = 0;
-    public static long totalUpdateDistNs = 0;
-    public static long totalInsertOOrderNs = 0;
-    public static long totalGetItemNs = 0;
-    public static long totalGetStockNs = 0;
-    public static long totalUpdateStockNs = 0;
-    public static long totalInsertOrderLineNs = 0;
 
     // DynamicProcedure needs replaySpeedupLimited and replaySpeedup to know how to replay all SQLStmts in replayTransaction
     public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupLimited, double replaySpeedup) throws SQLException {
@@ -92,58 +81,12 @@ public class DynamicProcedure extends Procedure {
                 }
             }
 
+            
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
-            PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray());
-            // DynamicProcedure.printPreparedStatement(preparedStatement);
-            long startTime = System.nanoTime();
-            preparedStatement.execute();
-            long endTime = System.nanoTime();
-
-            int numMatched = 0;
-            if (preparedStatement.toString().contains("FROM " + TPCCConstants.TABLENAME_CUSTOMER)) {
-                totalGetCustNs += endTime - startTime;
-                numMatched++;
+            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray())) {
+                // DynamicProcedure.printPreparedStatement(preparedStatement);
+                preparedStatement.execute();
             }
-            if (preparedStatement.toString().contains("FROM " + TPCCConstants.TABLENAME_WAREHOUSE)) {
-                totalGetWhseNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("FROM " + TPCCConstants.TABLENAME_DISTRICT)) {
-                totalGetDistNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("INTO " + TPCCConstants.TABLENAME_NEWORDER)) {
-                totalInsertNewOrderNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("UPDATE " + TPCCConstants.TABLENAME_DISTRICT)) {
-                totalUpdateDistNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("INTO " + TPCCConstants.TABLENAME_OPENORDER)) {
-                totalInsertOOrderNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("FROM " + TPCCConstants.TABLENAME_ITEM)) {
-                totalGetItemNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("FROM " + TPCCConstants.TABLENAME_STOCK)) {
-                totalGetStockNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("UPDATE " + TPCCConstants.TABLENAME_STOCK)) {
-                totalUpdateStockNs += endTime - startTime;
-                numMatched++;
-            }
-            if (preparedStatement.toString().contains("INTO " + TPCCConstants.TABLENAME_ORDERLINE)) {
-                totalInsertOrderLineNs += endTime - startTime;
-                numMatched++;
-            }
-            if (numMatched > 1) {
-                throw new RuntimeException("numMatched wrong");
-            }
-
             replayTransaction.removeSQLStmtCall();
         }
 

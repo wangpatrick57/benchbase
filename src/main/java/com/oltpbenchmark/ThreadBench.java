@@ -21,8 +21,6 @@ import com.oltpbenchmark.LatencyRecord.Sample;
 import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
-import com.oltpbenchmark.benchmarks.tpcc.procedures.NewOrder;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.util.StringUtil;
 import org.apache.commons.collections4.map.ListOrderedMap;
@@ -215,28 +213,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             // Go to next phase if this one is complete or enter if error was thrown
             boolean errorThrown = testState.getState() == State.ERROR;
             if ((phaseComplete || errorThrown) && !lastEntry) {
-                System.out.printf("NewOrder.totalGetCustNs=%d\n", NewOrder.totalGetCustNs);
-                System.out.printf("NewOrder.totalGetWhseNs=%d\n", NewOrder.totalGetWhseNs);
-                System.out.printf("NewOrder.totalGetDistNs=%d\n", NewOrder.totalGetDistNs);
-                System.out.printf("NewOrder.totalInsertNewOrderNs=%d\n", NewOrder.totalInsertNewOrderNs);
-                System.out.printf("NewOrder.totalUpdateDistNs=%d\n", NewOrder.totalUpdateDistNs);
-                System.out.printf("NewOrder.totalInsertOOrderNs=%d\n", NewOrder.totalInsertOOrderNs);
-                System.out.printf("NewOrder.totalGetItemNs=%d\n", NewOrder.totalGetItemNs);
-                System.out.printf("NewOrder.totalGetStockNs=%d\n", NewOrder.totalGetStockNs);
-                System.out.printf("NewOrder.totalUpdateStockNs=%d\n", NewOrder.totalUpdateStockNs);
-                System.out.printf("NewOrder.totalInsertOrderLineSNs=%d\n", NewOrder.totalInsertOrderLineNs);
-
-                System.out.printf("DynamicProcedure.totalGetCustNs=%d\n", DynamicProcedure.totalGetCustNs);
-                System.out.printf("DynamicProcedure.totalGetWhseNs=%d\n", DynamicProcedure.totalGetWhseNs);
-                System.out.printf("DynamicProcedure.totalGetDistNs=%d\n", DynamicProcedure.totalGetDistNs);
-                System.out.printf("DynamicProcedure.totalInsertNewOrderNs=%d\n", DynamicProcedure.totalInsertNewOrderNs);
-                System.out.printf("DynamicProcedure.totalUpdateDistNs=%d\n", DynamicProcedure.totalUpdateDistNs);
-                System.out.printf("DynamicProcedure.totalInsertOOrderNs=%d\n", DynamicProcedure.totalInsertOOrderNs);
-                System.out.printf("DynamicProcedure.totalGetItemNs=%d\n", DynamicProcedure.totalGetItemNs);
-                System.out.printf("DynamicProcedure.totalGetStockNs=%d\n", DynamicProcedure.totalGetStockNs);
-                System.out.printf("DynamicProcedure.totalUpdateStockNs=%d\n", DynamicProcedure.totalUpdateStockNs);
-                System.out.printf("DynamicProcedure.totalInsertOrderLineSNs=%d\n", DynamicProcedure.totalInsertOrderLineNs);
-
                 // enters here after each phase of the test
                 // reset the queues so that the new phase is not affected by the
                 // queue of the previous one
