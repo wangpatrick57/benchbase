@@ -24,8 +24,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +78,6 @@ public class DynamicProcedure extends Procedure {
                 }
             }
 
-            
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray())) {
                 // DynamicProcedure.printPreparedStatement(preparedStatement);

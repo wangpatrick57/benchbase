@@ -31,10 +31,8 @@ import com.oltpbenchmark.DBWorkload;
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.util.Pair;
 
-/**
- * TODO: after finishing, decide whether this should be a subclass of queue
- */
-// TODO: this is currently hardcoded for Postgres' log file format
+// ReplayFileQueue provides a queue-like interface over a replay file.
+// This currently only works for Postgres' log file format.
 public class ReplayFileQueue {
     private static final Logger LOG = LoggerFactory.getLogger(DBWorkload.class);
     private static final int LOG_TIME_INDEX = 0;
@@ -49,18 +47,14 @@ public class ReplayFileQueue {
     private CSVReader csvReader;
 
     /**
-     * ReplayFileQueue provides a queue interface over a replay file.
-     * 
-     * One important note is that the peek() and pop() operations may block for disk reads.
-     * Prefetching is used to avoid this as much as possible, but if the rate of peek() and pop()
-     * calls is higher than the maximum disk throughput, blocking is inevitable.
+     * The constructor reads the entire file into memory
      */
-    public ReplayFileQueue(String replayFilePath) {
+    public ReplayFileQueue(String logFilePath) {
         try {
             // CSVReader handles CSV values which have newlines embedded in them
-            this.csvReader = new CSVReader(new BufferedReader(new FileReader(replayFilePath)));
+            this.csvReader = new CSVReader(new BufferedReader(new FileReader(logFilePath)));
         } catch (FileNotFoundException e) {
-            LOG.error("Replay file " + replayFilePath + " does not exist");
+            LOG.error("Replay file " + logFilePath + " does not exist");
             System.exit(-1);
         }
         

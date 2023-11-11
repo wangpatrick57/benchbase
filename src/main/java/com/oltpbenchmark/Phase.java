@@ -63,7 +63,7 @@ public class Phase {
     private long firstFirstLogTime;
 
 
-    Phase(String benchmarkName, int id, int t, int wt, double r, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupLimited, boolean replay, boolean timed, int activeTerminals, Arrival a, String replayFilePath) {
+    Phase(String benchmarkName, int id, int t, int wt, double r, double replaySpeedup, List<Double> weights, boolean rateLimited, boolean disabled, boolean serial, boolean replaySpeedupLimited, boolean replay, boolean timed, int activeTerminals, Arrival a, String logFilePath) {
         this.benchmarkName = benchmarkName;
         this.id = id;
         this.time = t;
@@ -83,7 +83,7 @@ public class Phase {
         this.arrival = a;
 
         if (this.isReplay()) {
-            this.replayFileQueue = new ReplayFileQueue(replayFilePath);
+            this.replayFileQueue = new ReplayFileQueue(logFilePath);
         }
     }
 

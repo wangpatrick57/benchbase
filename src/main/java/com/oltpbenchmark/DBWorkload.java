@@ -322,13 +322,13 @@ public class DBWorkload {
 
                 // We now have the option of replaying queries from a log file
                 boolean replay = Boolean.parseBoolean(work.getString("replay", Boolean.FALSE.toString()));
-                String replayFilePath = DBWorkload.expandTilde(work.getString("replayfile", ""));
+                String logFilePath = DBWorkload.expandTilde(work.getString("logfile", ""));
                 boolean replaySpeedupLimited = true;
                 String replaySpeedupString = work.getString("replayspeedup", "");
                 double replaySpeedup = 1;
                 if (replay) {
-                    if (replayFilePath == "") {
-                        LOG.error(String.format("Configuration error in work %d: " + "Phase is a replay phase but replayfile is not specified", i));
+                    if (logFilePath == "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is a replay phase but logfile is not specified", i));
                         System.exit(-1);
                     }
                     if (replaySpeedupString != "") {
@@ -348,8 +348,8 @@ public class DBWorkload {
                         }
                     }
                 } else {
-                    if (replayFilePath != "") {
-                        LOG.error(String.format("Configuration error in work %d: " + "Phase is not a replay phase but replayfile is specified", i));
+                    if (logFilePath != "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is not a replay phase but logfile is specified", i));
                         System.exit(-1);
                     }
                     if (replaySpeedupString != "") {
@@ -418,7 +418,7 @@ public class DBWorkload {
                 }
 
 
-                wrkld.addPhase(i, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupLimited, replay, timed, activeTerminals, arrival, replayFilePath);
+                wrkld.addPhase(i, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupLimited, replay, timed, activeTerminals, arrival, logFilePath);
             }
 
             // CHECKING INPUT PHASES
