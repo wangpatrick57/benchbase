@@ -216,7 +216,7 @@ public class NewOrder extends TPCCProcedure {
 
             stmtUpdateStock.executeBatch();
             stmtUpdateStock.clearBatch();
-            
+
         }
 
     }
