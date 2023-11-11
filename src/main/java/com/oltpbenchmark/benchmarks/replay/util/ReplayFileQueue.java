@@ -47,92 +47,111 @@ public class ReplayFileQueue {
 
     private String logFilePath;
     private Queue<ReplayTransaction> queue;
-    private CSVReader csvReader;
-    private boolean hasSuccessfullyLoaded = false;
+    private boolean hasSuccessfullyLoaded;
+    
+    private Map<Integer, SQLStmt> sqlStmtCache;
 
     /**
      * The constructor reads the entire file into memory
      */
     public ReplayFileQueue(String logFilePath) {
         this.logFilePath = logFilePath;
+        this.hasSuccessfullyLoaded = false;
     }
 
     public void load() {
         synchronized (this) {
-            try {
-                // CSVReader handles CSV values which have newlines embedded in them
-                this.csvReader = new CSVReader(new BufferedReader(new FileReader(logFilePath)));
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException("Replay file " + logFilePath + " does not exist");
-            }
-            
-            queue = new LinkedList<>();
-            String[] fields;
+            loadLogFile();
+        }
+    }
 
-            try {
-                // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
-                // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
-                //  - XIDs don't work because (1) XIDs aren't even assigned to read-only transactions and (2) the XID wraparound issue means different transactions active at the same time may have the same XID
-                //  - VXIDs do work as they are (1) always assigned and (2) guaranteed to be unique amongst active transactions as they are used for locking
-                Map<String, ReplayTransaction> activeTransactions = new HashMap<String, ReplayTransaction>();
+    private void loadLogFile() {
+        CSVReader csvReader;
+        try {
+            // CSVReader handles CSV values which have newlines embedded in them
+            csvReader = new CSVReader(new BufferedReader(new FileReader(logFilePath)));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Replay file " + logFilePath + " does not exist");
+        }
+        
+        String[] fields;
+        this.queue = new LinkedList<>();
+        int nextSQLStmtID = 0;
+        Map<String, Integer> sqlStringIDs = new HashMap<>();
+        this.sqlStmtCache = new HashMap<>();
 
-                while ((fields = this.csvReader.readNext()) != null) {
-                    // we parse the line in ReplayFileQueue instead of sending it to the constructor of ReplayTransaction
-                    // because sometimes transactions are built from multiple lines
-                    String logTimeString = fields[LOG_TIME_INDEX];
-                    long logTime = ReplayFileQueue.dtStringToNanoTime(logTimeString);
-                    String messageString = fields[MESSAGE_INDEX];
-                    String sqlString = ReplayFileQueue.parseSQLFromMessage(messageString);
-                    if (sqlString == null) {
-                        // ignore any lines which are not SQL statements
-                        continue;
+        try {
+            // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
+            // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
+            //  - XIDs don't work because (1) XIDs aren't even assigned to read-only transactions and (2) the XID wraparound issue means different transactions active at the same time may have the same XID
+            //  - VXIDs do work as they are (1) always assigned and (2) guaranteed to be unique amongst active transactions as they are used for locking
+            Map<String, ReplayTransaction> activeTransactions = new HashMap<String, ReplayTransaction>();
+
+            while ((fields = csvReader.readNext()) != null) {
+                // we parse the line in ReplayFileQueue instead of sending it to the constructor of ReplayTransaction
+                // because sometimes transactions are built from multiple lines
+                String logTimeString = fields[LOG_TIME_INDEX];
+                long logTime = ReplayFileQueue.dtStringToNanoTime(logTimeString);
+                String messageString = fields[MESSAGE_INDEX];
+                String sqlString = ReplayFileQueue.parseSQLFromMessage(messageString);
+                if (sqlString == null) {
+                    // ignore any lines which are not SQL statements
+                    continue;
+                }
+                String detailString = fields[DETAIL_INDEX];
+                List<Object> params = ReplayFileQueue.parseParamsFromDetail(detailString);
+                String vxid = fields[VXID_INDEX];
+
+                if (sqlString.matches(BEGIN_REGEX)) {
+                    if (activeTransactions.containsKey(vxid)) {
+                        throw new RuntimeException("Found BEGIN for an already active transaction");
                     }
-                    String detailString = fields[DETAIL_INDEX];
-                    List<Object> params = ReplayFileQueue.parseParamsFromDetail(detailString);
-                    String vxid = fields[VXID_INDEX];
+                    ReplayTransaction emptyExplicitReplayTransaction = new ReplayTransaction(logTime, true);
+                    activeTransactions.put(vxid, emptyExplicitReplayTransaction);
+                    // in the queue, replay transactions are ordered by the time they first appear in the log file
+                    queue.add(emptyExplicitReplayTransaction);
+                } else if (sqlString.matches(COMMIT_REGEX) || sqlString.matches(ABORT_REGEX)) {
+                    if (!activeTransactions.containsKey(vxid)) {
+                        throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
+                    }
+                    ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
+                    explicitReplayTransaction.setShouldAbort(sqlString.matches(ABORT_REGEX));
+                    activeTransactions.remove(vxid);
+                } else {
+                    // cache SQLStmts since most will be repeated
+                    // all replay transactions will hold references to SQLStmt objects in sqlStmtCache
+                    if (!sqlStringIDs.containsKey(sqlString)) {
+                        int sqlStmtID = nextSQLStmtID++;
+                        sqlStringIDs.put(sqlString, sqlStmtID);
+                        sqlStmtCache.put(sqlStmtID, new SQLStmt(sqlString));
+                    }
+                    SQLStmt sqlStmt = sqlStmtCache.get(sqlStringIDs.get(sqlString));
 
-                    if (sqlString.matches(BEGIN_REGEX)) {
-                        if (activeTransactions.containsKey(vxid)) {
-                            throw new RuntimeException("Found BEGIN for an already active transaction");
-                        }
-                        ReplayTransaction emptyExplicitReplayTransaction = new ReplayTransaction(logTime, true);
-                        activeTransactions.put(vxid, emptyExplicitReplayTransaction);
-                        // in the queue, replay transactions are ordered by the time they first appear in the log file
-                        queue.add(emptyExplicitReplayTransaction);
-                    } else if (sqlString.matches(COMMIT_REGEX) || sqlString.matches(ABORT_REGEX)) {
-                        if (!activeTransactions.containsKey(vxid)) {
-                            throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
-                        }
+                    if (activeTransactions.containsKey(vxid)) {
+                        // if it's in active transactions, it should be added to the corresponding explicit transaction
                         ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
-                        explicitReplayTransaction.setShouldAbort(sqlString.matches(ABORT_REGEX));
-                        activeTransactions.remove(vxid);
+                        explicitReplayTransaction.addSQLStmtCall(sqlStmt, params, logTime);
                     } else {
-                        // this is the only scope in which where we need sqlStmt, so we instantiate it here instead of before the if
-                        SQLStmt sqlStmt = new SQLStmt(sqlString);
-                        if (activeTransactions.containsKey(vxid)) {
-                            // if it's in active transactions, it should be added to the corresponding explicit transaction
-                            ReplayTransaction explicitReplayTransaction = activeTransactions.get(vxid);
-                            explicitReplayTransaction.addSQLStmtCall(sqlStmt, params, logTime);
-                        } else {
-                            // if it's not in active transactions, it must be an implicit transaction
-                            ReplayTransaction implicitReplayTransaction = new ReplayTransaction(logTime, false);
-                            implicitReplayTransaction.addSQLStmtCall(sqlStmt, params, logTime);
-                            queue.add(implicitReplayTransaction);
-                        }
+                        // if it's not in active transactions, it must be an implicit transaction
+                        ReplayTransaction implicitReplayTransaction = new ReplayTransaction(logTime, false);
+                        implicitReplayTransaction.addSQLStmtCall(sqlStmt, params, logTime);
+                        queue.add(implicitReplayTransaction);
                     }
                 }
-                int oldSize = queue.size();
-                queue.removeIf(replayTransaction -> !replayTransaction.getIsShouldAbortSet());
-                int newSize = queue.size();
-                if (newSize < oldSize) {
-                    LOG.warn("removed %d unfinished transactions", oldSize - newSize);
-                }
-                hasSuccessfullyLoaded = true;
-            } catch (CsvValidationException e) {
-                throw new RuntimeException("Log file not in a valid CSV format");
-            } catch (IOException e) {
-                throw new RuntimeException("I/O exception when reading log file");
             }
+            int oldSize = queue.size();
+            // any transactions with shouldAbort set will crash BenchBase so we need to remove them first
+            // do issue a warning if we remove any though
+            queue.removeIf(replayTransaction -> !replayTransaction.getIsShouldAbortSet());
+            int newSize = queue.size();
+            if (newSize < oldSize) {
+                LOG.warn("removed %d unfinished transactions", oldSize - newSize);
+            }
+            hasSuccessfullyLoaded = true;
+        } catch (CsvValidationException e) {
+            throw new RuntimeException("Log file not in a valid CSV format");
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception when reading log file");
         }
     }
 
