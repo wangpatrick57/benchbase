@@ -84,6 +84,7 @@ public class Phase {
 
         if (this.isReplay()) {
             this.replayFileQueue = new ReplayFileQueue(logFilePath);
+            this.replayFileQueue.load();
         }
     }
 
