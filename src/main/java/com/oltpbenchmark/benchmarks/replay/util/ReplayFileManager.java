@@ -2,11 +2,14 @@ package com.oltpbenchmark.benchmarks.replay.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -34,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import com.oltpbenchmark.DBWorkload;
 import com.oltpbenchmark.api.SQLStmt;
+import com.oltpbenchmark.util.ConsoleUtil;
 import com.oltpbenchmark.util.Pair;
 
 // ReplayFileManager provides a queue-like interface over a replay file.
@@ -108,11 +112,18 @@ public class ReplayFileManager {
     }
 
     private void convertLogFileToReplayFile() {
-        LOG.info("Converting the log file " + logFilePath + " into the replay file " + replayFilePath + "...");
-        CSVReader logFileReader;
+        LOG.info("Converting the log file " + this.logFilePath + " into the replay file " + this.replayFilePath + "...");
+        File logFile = new File(this.logFilePath);
+        File replayFile = new File(this.replayFilePath);
+        long totalBytes = logFile.length();
+        FileInputStream logInputStream;
+        CSVReader logCSVReader;
         try {
+            // FileInputStream is used to track # of bytes read for the progress bar
+            logInputStream = new FileInputStream(this.logFilePath);
+            // BufferedReader is used for performance
             // CSVReader handles CSV values which have newlines embedded in them
-            logFileReader = new CSVReader(new BufferedReader(new FileReader(this.logFilePath)));
+            logCSVReader = new CSVReader(new BufferedReader(new InputStreamReader(logInputStream)));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Log file " + this.logFilePath + " does not exist");
         }
@@ -128,7 +139,8 @@ public class ReplayFileManager {
                 Map<String, LogTransaction> activeTransactions = new HashMap<String, LogTransaction>();
 
                 String[] fields;
-                while ((fields = logFileReader.readNext()) != null) {
+                int lastProgressPercent = -1;
+                while ((fields = logCSVReader.readNext()) != null) {
                     // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
@@ -187,7 +199,11 @@ public class ReplayFileManager {
                         replayFileWriter.write(logTransaction.getFormattedString());
                         logTransactionQueue.remove();
                     }
+
+                    long bytesRead = logInputStream.getChannel().position();
+                    lastProgressPercent = ConsoleUtil.printProgressBar(bytesRead, totalBytes, lastProgressPercent);
                 }
+                System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
 
                 if (!logTransactionQueue.isEmpty()) {
                     LOG.warn("There are %d unfinished transactions in the log file", logTransactionQueue.size());
@@ -208,10 +224,16 @@ public class ReplayFileManager {
             } catch (IOException e) {
                 throw new RuntimeException("I/O exception when reading log file");
             }
+        // delete the replay file in all error cases since the file won't be finished
         } catch (FileNotFoundException e) {
+            replayFile.delete();
             throw new RuntimeException("Replay file " + this.replayFilePath + " does not exist");
         } catch (IOException e) {
+            replayFile.delete();
             throw new RuntimeException("Encountered IOException " + e + " when opening replay file");
+        } catch (RuntimeException e) {
+            replayFile.delete();
+            throw e;
         }
     }
 
