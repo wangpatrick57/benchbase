@@ -17,7 +17,7 @@
 
 package com.oltpbenchmark;
 
-import com.oltpbenchmark.benchmarks.replay.util.ReplayFileQueue;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileManager;
 import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
 import com.oltpbenchmark.util.StringUtil;
 
@@ -58,7 +58,7 @@ public class Phase {
     private final int activeTerminals;
     private int nextSerial;
 
-    private ReplayFileQueue replayFileQueue;
+    private ReplayFileManager replayFileQueue;
     private long replayStartTime;
     private long firstFirstLogTime;
 
@@ -83,7 +83,7 @@ public class Phase {
         this.arrival = a;
 
         if (this.isReplay()) {
-            this.replayFileQueue = new ReplayFileQueue(logFilePath);
+            this.replayFileQueue = new ReplayFileManager(logFilePath);
             this.replayFileQueue.load();
         }
     }

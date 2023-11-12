@@ -36,7 +36,7 @@ import com.oltpbenchmark.util.Pair;
 
 // ReplayFileQueue provides a queue-like interface over a replay file.
 // This currently only works for Postgres' log file format.
-public class ReplayFileQueue {
+public class ReplayFileManager {
     private static final Logger LOG = LoggerFactory.getLogger(DBWorkload.class);
     private static final int PGLOG_LOG_TIME_INDEX = 0;
     private static final int PGLOG_VXID_INDEX = 9;
@@ -45,6 +45,7 @@ public class ReplayFileQueue {
     private static final String BEGIN_REGEX = "BEGIN;?";
     private static final String COMMIT_REGEX = "COMMIT;?";
     private static final String ABORT_REGEX = "(ABORT|ROLLBACK);?";
+    private static final String REPLAY_FILE_SECTION_DELIM = "###";
 
     private String logFilePath;
     private String replayFilePath;
@@ -56,7 +57,7 @@ public class ReplayFileQueue {
     /**
      * The constructor reads the entire file into memory
      */
-    public ReplayFileQueue(String logFilePath) {
+    public ReplayFileManager(String logFilePath) {
         this.logFilePath = logFilePath;
         this.replayFilePath = getReplayFilePath(logFilePath);
         this.hasSuccessfullyLoaded = false;
@@ -102,9 +103,9 @@ public class ReplayFileQueue {
                     // we parse the line in ReplayFileQueue instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
-                    long logTime = ReplayFileQueue.dtStringToNanoTime(logTimeString);
+                    long logTime = ReplayFileManager.dtStringToNanoTime(logTimeString);
                     String messageString = fields[PGLOG_MESSAGE_INDEX];
-                    String sqlString = ReplayFileQueue.parseSQLFromMessage(messageString);
+                    String sqlString = ReplayFileManager.parseSQLFromMessage(messageString);
                     if (sqlString == null) {
                         // ignore any lines which are not SQL statements
                         continue;
@@ -158,8 +159,20 @@ public class ReplayFileQueue {
                         logTransactionQueue.remove();
                     }
                 }
+
                 if (!logTransactionQueue.isEmpty()) {
                     LOG.warn("There are %d unfinished transactions in the log file", logTransactionQueue.size());
+                }
+
+                // write sqlStringIDs to the file as well
+                replayFileWriter.write(REPLAY_FILE_SECTION_DELIM + "\n");
+                for (Map.Entry<String, Integer> entry : sqlStringIDs.entrySet()) {
+                    int sqlStmtID = entry.getValue();
+                    String sqlString = entry.getKey();
+                    replayFileWriter.write(Integer.toString(sqlStmtID));
+                    replayFileWriter.write(",");
+                    replayFileWriter.write("\"" + sqlString + "\"");
+                    replayFileWriter.write("\n");
                 }
             } catch (CsvValidationException e) {
                 throw new RuntimeException("Log file not in a valid CSV format");
@@ -313,7 +326,7 @@ public class ReplayFileQueue {
      * @return A SQL string or null if the message is not a SQL message
      */
     private static String parseSQLFromMessage(String messageString) {
-        Pair<String, String> typeAndContent = ReplayFileQueue.splitTypeAndContent(messageString);
+        Pair<String, String> typeAndContent = ReplayFileManager.splitTypeAndContent(messageString);
         if (typeAndContent != null) {
             String messageType = typeAndContent.first;
             String messageContent = typeAndContent.second;
@@ -344,7 +357,7 @@ public class ReplayFileQueue {
      */
     private static List<Object> parseParamsFromDetail(String detailString) {
         List<Object> valuesList = new ArrayList<>();
-        Pair<String, String> typeAndContent = ReplayFileQueue.splitTypeAndContent(detailString);
+        Pair<String, String> typeAndContent = ReplayFileManager.splitTypeAndContent(detailString);
         
         if (typeAndContent != null) {
             String detailType = typeAndContent.first;
@@ -356,7 +369,7 @@ public class ReplayFileQueue {
                 Matcher matcher = pattern.matcher(detailContent);
 
                 while (matcher.find()) {
-                    valuesList.add(ReplayFileQueue.parseSQLLogStringToObject(matcher.group(1)));
+                    valuesList.add(ReplayFileManager.parseSQLLogStringToObject(matcher.group(1)));
                 }
             }
         }

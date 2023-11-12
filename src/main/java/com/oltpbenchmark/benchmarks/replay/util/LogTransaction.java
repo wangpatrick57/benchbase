@@ -39,7 +39,7 @@ public class LogTransaction {
         }
 
         private String getFormattedString() {
-            return String.format("%d,%s,%s", this.callTime, this.sqlStmtOutputString, this.paramsString);
+            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.paramsString);
         }
     }
 
