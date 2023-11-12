@@ -7,6 +7,8 @@ import java.util.Queue;
 
 import com.oltpbenchmark.api.SQLStmt;
 
+// A ReplayTransaction represents a single transaction to replay
+// These transactions are created by reading from the replay file
 public class ReplayTransaction {
     private static class SQLStmtCall {
         private SQLStmt sqlStmt;
@@ -32,7 +34,6 @@ public class ReplayTransaction {
     private Optional<Boolean> shouldAbort;
 
     /**
-     * A ReplayTransaction represents a single transaction to replay
      * @param firstLogTime The timestamp, in nanoseconds, the first line of this transaction was logged at
      * @param isExplicitTransaction Whether this object represents an explicit or implicit transaction
      */

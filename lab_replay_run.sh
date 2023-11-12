@@ -14,5 +14,12 @@ fi
 
 # [Invariant] lab_log.csv will be correctly set
 
-"$RESET_FPATH" # reset the database
-./run.sh lab-replay # run a replay
+# reset DB
+if false; then
+  "$RESET_FPATH"
+fi
+
+# run replay
+if true; then
+  ./run.sh lab-replay
+fi
