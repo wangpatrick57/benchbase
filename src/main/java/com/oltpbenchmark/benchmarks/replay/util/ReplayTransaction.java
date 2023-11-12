@@ -31,7 +31,7 @@ public class ReplayTransaction {
 
     private Queue<SQLStmtCall> sqlStmtCalls;
     private long firstLogTime;
-    private Optional<Boolean> shouldAbort;
+    private Optional<Boolean> shouldRollback;
 
     /**
      * @param firstLogTime The timestamp, in nanoseconds, the first line of this transaction was logged at
@@ -42,20 +42,20 @@ public class ReplayTransaction {
         this.sqlStmtCalls = new LinkedList<>();
         
         if (isExplicitTransaction) {
-            this.shouldAbort = Optional.empty(); // for explicit transactions, this needs to be set later on when COMMIT or ABORT is read
+            this.shouldRollback = Optional.empty(); // for explicit transactions, this needs to be set later on when COMMIT or ABORT is read
         } else {
-            this.shouldAbort = Optional.of(false); // implicit transactions are never aborted
+            this.shouldRollback = Optional.of(false); // implicit transactions are never aborted
         }
     }
 
     /**
-     * @pre shouldAbort has not already been set (either by the constructor or by this function)
+     * @pre shouldRollback has not already been set (either by the constructor or by this function)
      */
-    public void setShouldAbort(boolean shouldAbort) {
-        if (this.getIsShouldAbortSet()) {
-            throw new RuntimeException("setShouldAbort should only be called if shouldAbort is not already set");
+    public void setShouldRollback(boolean shouldRollback) {
+        if (this.getIsShouldRollbackSet()) {
+            throw new RuntimeException("setShouldRollback should only be called if shouldRollback is not already set");
         }
-        this.shouldAbort = Optional.of(shouldAbort);
+        this.shouldRollback = Optional.of(shouldRollback);
     }
 
     public void addSQLStmtCall(SQLStmt sqlStmt, List<Object> params, long callTime) {
@@ -99,20 +99,20 @@ public class ReplayTransaction {
     }
 
     /**
-     * @pre If the transaction is explicit, setShouldAbort() has been called
+     * @pre If the transaction is explicit, setShouldRollback() has been called
      */
-    public boolean getShouldAbort() {
-        if (!this.getIsShouldAbortSet()) {
-            throw new RuntimeException("getShouldAbort was called when shouldAbort is unknown");
+    public boolean getShouldRollback() {
+        if (!this.getIsShouldRollbackSet()) {
+            throw new RuntimeException("getShouldRollback was called when shouldRollback is unknown");
         }
-        return this.shouldAbort.get();
+        return this.shouldRollback.get();
     }
 
     public long getFirstLogTime() {
         return this.firstLogTime;
     }
 
-    public boolean getIsShouldAbortSet() {
-        return !this.shouldAbort.isEmpty();
+    public boolean getIsShouldRollbackSet() {
+        return !this.shouldRollback.isEmpty();
     }
 }

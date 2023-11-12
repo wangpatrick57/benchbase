@@ -9,10 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -21,7 +18,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -51,12 +47,11 @@ public class ReplayFileManager {
     private static final int PGLOG_VXID_INDEX = 9;
     private static final int PGLOG_MESSAGE_INDEX = 13;
     private static final int PGLOG_DETAIL_INDEX = 14;
-    private static final String BEGIN_REGEX = "BEGIN;?";
-    private static final String COMMIT_REGEX = "COMMIT;?";
-    private static final String ABORT_REGEX = "(ABORT|ROLLBACK);?";
+    private static final String BEGIN_STRING = "BEGIN";
+    private static final String COMMIT_STRING = "COMMIT";
+    private static final String ROLLBACK_STRING = "ROLLBACK";
     private static final String REPLAY_FILE_SECTION_DELIM = "###";
     private static final FastLogDateTimeParser fastDTParser = new FastLogDateTimeParser();
-    private static final DateTimeFormatter staticFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z", Locale.US);
 
     private String logFilePath;
     private String replayFilePath;
@@ -111,9 +106,9 @@ public class ReplayFileManager {
 
             if (doConvert) {
                 convertLogFileToReplayFile();
+                throw new RuntimeException("early exit");
             }
             loadReplayFile();
-            throw new RuntimeException("early exit");
         }
     }
 
@@ -133,10 +128,7 @@ public class ReplayFileManager {
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Log file " + this.logFilePath + " does not exist");
         }
-        long fnStartTime = System.nanoTime();
         long totalInLoopComputeTime = 0;
-        long totalTimeInDTParsing = 0;
-        long numDTsParsed = 0;
         try (FileWriter replayFileWriter = new FileWriter(this.replayFilePath)) {
             try {
                 Queue<LogTransaction> logTransactionQueue = new LinkedList<>();
@@ -150,15 +142,13 @@ public class ReplayFileManager {
 
                 String[] fields;
                 int lastProgressPercent = -1;
+                long loopOuterStartTime = System.nanoTime();
                 while ((fields = logCSVReader.readNext()) != null) {
-                    long loopStartTime = System.nanoTime();
+                    long loopInnerStartTime = System.nanoTime();
                     // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
-                    long dtParseStartTime = System.nanoTime();
                     long logTime = fastDTParser.dtStringToNanoTime(logTimeString);
-                    totalTimeInDTParsing += System.nanoTime() - dtParseStartTime;
-                    numDTsParsed++;
                     String messageString = fields[PGLOG_MESSAGE_INDEX];
                     String sqlString = ReplayFileManager.parseSQLFromMessage(messageString);
                     if (sqlString == null) {
@@ -169,28 +159,25 @@ public class ReplayFileManager {
                     String vxid = fields[PGLOG_VXID_INDEX];
 
                     // manage activeTransactions and logTransactionQueue based on what the line is
-                    if (sqlString.matches(BEGIN_REGEX)) {
-                        if (activeTransactions.containsKey(vxid)) {
-                            throw new RuntimeException("Found BEGIN for an already active transaction");
-                        }
+                    if (sqlString.equals(BEGIN_STRING)) {
+                        assert(!activeTransactions.containsKey(vxid));
                         LogTransaction newExplicitLogTransaction = new LogTransaction(true);
                         newExplicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
                         activeTransactions.put(vxid, newExplicitLogTransaction);
                         // in the output replay file, replay transactions are ordered by the time they first appear in the log file
                         logTransactionQueue.add(newExplicitLogTransaction);
-                    } else if (sqlString.matches(COMMIT_REGEX) || sqlString.matches(ABORT_REGEX)) {
-                        if (!activeTransactions.containsKey(vxid)) {
-                            throw new RuntimeException("Found COMMIT or ABORT for a non-active transaction");
-                        }
+                    } else if (sqlString.equals(COMMIT_STRING) || sqlString.equals(ROLLBACK_STRING)) {
+                        assert(!activeTransactions.containsKey(vxid));
                         LogTransaction explicitLogTransaction = activeTransactions.get(vxid);
                         explicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
                         explicitLogTransaction.markComplete();
                         activeTransactions.remove(vxid);
                     } else {
-                        if (!sqlStringIDs.containsKey(sqlString)) {
-                            sqlStringIDs.put(sqlString, nextSQLStmtID++);
+                        Integer sqlStmtID = sqlStringIDs.get(sqlString);
+                        if (sqlStmtID == null) {
+                            sqlStmtID = nextSQLStmtID++;
+                            sqlStringIDs.put(sqlString, sqlStmtID);
                         }
-                        int sqlStmtID = sqlStringIDs.get(sqlString);
 
                         if (activeTransactions.containsKey(vxid)) {
                             // if it's in active transactions, it should be added to the corresponding explicit transaction
@@ -204,26 +191,29 @@ public class ReplayFileManager {
                         }
                     }
 
-                    // write as many log transactions as possible. one constraint on the replay file
-                    // is that all transactions have all their lines grouped together and are ordered
-                    // by first log timestamp. the only way to satisfy both these constraints is to only
-                    // write a log transaction if it is completed and it it as the start of logTransactionQueue
-                    while (!logTransactionQueue.isEmpty() && logTransactionQueue.peek().getIsComplete()) {
-                        LogTransaction logTransaction = logTransactionQueue.peek();
-                        totalInLoopComputeTime += System.nanoTime() - loopStartTime;
-                        replayFileWriter.write(logTransaction.getFormattedString());
-                        loopStartTime = System.nanoTime();
-                        logTransactionQueue.remove();
-                    }
-
                     long bytesRead = logInputStream.getChannel().position();
                     lastProgressPercent = ConsoleUtil.printProgressBar(bytesRead, totalBytes, lastProgressPercent);
-                    totalInLoopComputeTime += System.nanoTime() - loopStartTime;
+                    totalInLoopComputeTime += System.nanoTime() - loopInnerStartTime;
                 }
                 System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
+                System.out.printf("The whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
+                System.out.printf("We spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
 
-                if (!logTransactionQueue.isEmpty()) {
-                    LOG.warn("There are %d unfinished transactions in the log file", logTransactionQueue.size());
+                // write all transactions at the end instead of inside the loop so that both the log file
+                // read and the replay file write can be sequential 
+                int numUncompletedTransactions = 0;
+                while (!logTransactionQueue.isEmpty()) {
+                    LogTransaction logTransaction = logTransactionQueue.peek();
+                    if (logTransaction.getIsComplete()) {
+                        replayFileWriter.write(logTransaction.getFormattedString());
+                    } else {
+                        numUncompletedTransactions++;
+                    }
+                    logTransactionQueue.remove();
+                }
+
+                if (numUncompletedTransactions > 0) {
+                    LOG.warn("There are %d unfinished transactions in the log file", numUncompletedTransactions);
                 }
 
                 // write sqlStringIDs to the file as well
@@ -252,17 +242,6 @@ public class ReplayFileManager {
             replayFile.delete();
             throw e;
         }
-        System.out.printf("The whole function took %.4fms\n", (double)(System.nanoTime() - fnStartTime) / 1000000);
-        System.out.printf("We spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
-        System.out.printf("We spent %dns doing parsing %d datetimes\n", totalTimeInDTParsing, numDTsParsed);
-    }
-
-    private long dtStringToNanoTime(String dtString) {
-        //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z", Locale.US);
-        ZonedDateTime zdt = ZonedDateTime.parse(dtString, staticFormatter);
-        Instant instant = zdt.toInstant();
-        long nanoseconds = instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
-        return nanoseconds;
     }
 
     private void loadReplayFile() {
@@ -295,16 +274,16 @@ public class ReplayFileManager {
                 String detailString = fields[2];
                 List<Object> params = ReplayFileManager.parseParamsFromDetail(detailString);
 
-                if (sqlStmtIDOrString.matches(BEGIN_REGEX)) {
+                if (sqlStmtIDOrString.equals(BEGIN_STRING)) {
                     if (currentActiveTransaction != null) {
                         throw new RuntimeException("Found BEGIN when previous transaction hadn't ended yet");
                     }
                     currentActiveTransaction = new ReplayTransaction(logTime, true);
-                } else if (sqlStmtIDOrString.matches(COMMIT_REGEX) || sqlStmtIDOrString.matches(ABORT_REGEX)) {
+                } else if (sqlStmtIDOrString.equals(COMMIT_STRING) || sqlStmtIDOrString.equals(ROLLBACK_STRING)) {
                     if (currentActiveTransaction == null) {
-                        throw new RuntimeException("Found COMMIT or ABORT when there is no active transaction");
+                        throw new RuntimeException("Found COMMIT or ROLLBACK when there is no active transaction");
                     }
-                    currentActiveTransaction.setShouldAbort(sqlStmtIDOrString.matches(ABORT_REGEX));
+                    currentActiveTransaction.setShouldRollback(sqlStmtIDOrString.equals(ROLLBACK_STRING));
                     replayTransactionQueue.add(currentActiveTransaction);
                     currentActiveTransaction = null;
                 } else {
@@ -414,11 +393,34 @@ public class ReplayFileManager {
             String messageType = typeAndContent.first;
             String messageContent = typeAndContent.second;
             boolean typeIsStatement = messageType.equals("statement");
-            boolean typeIsExecute = messageType.matches("^execute .*$");
+            boolean typeIsExecute = messageType.startsWith("execute");
 
             if (typeIsStatement || typeIsExecute) {
-                String questionMarks = messageContent.replaceAll("\\$\\d+", "?");
-                return questionMarks;
+                // replace all $[number] with '?' in an efficient way
+                StringBuilder sqlWithQuestionMarks = new StringBuilder();
+                boolean isInDollarNum = false;
+
+                for (int i = 0; i < messageContent.length(); i++) {
+                    char c = messageContent.charAt(i);
+
+                    if (c == '$') {
+                        sqlWithQuestionMarks.append('?');
+                        isInDollarNum = true;
+                    } else {
+                        if (isInDollarNum) {
+                            if (Character.isDigit(c)) {
+                                // still in dollar num
+                            } else {
+                                isInDollarNum = false;
+                                sqlWithQuestionMarks.append(c);
+                            }
+                        } else {
+                            sqlWithQuestionMarks.append(c);
+                        }
+                    }
+                }
+
+                return sqlWithQuestionMarks.toString();
             } else {
                 return null;
             }
@@ -447,12 +449,10 @@ public class ReplayFileManager {
             String detailContent = typeAndContent.second;
 
             if (detailType.equals("parameters")) {
-                // Regular expression to match single-quoted values.
-                Pattern pattern = Pattern.compile("'(.*?)'");
-                Matcher matcher = pattern.matcher(detailContent);
-
-                while (matcher.find()) {
-                    valuesList.add(ReplayFileManager.parseSQLLogStringToObject(matcher.group(1)));
+                String[] detailContentComponents = detailContent.split("'");
+                for (int i = 1; i < detailContentComponents.length; i += 1) {
+                    String component = detailContentComponents[i];
+                    valuesList.add(ReplayFileManager.parseSQLLogStringToObject(component));
                 }
             }
         }
@@ -502,7 +502,7 @@ public class ReplayFileManager {
     }
 
     /**
-     * Split a log string into "type" and "content"
+     * @brief Split a log string into "type" and "content"
      * 
      * The format is "[type]: [content]"
      * Both "message" and "detail" strings are in the same format
@@ -512,12 +512,9 @@ public class ReplayFileManager {
      */
     private static Pair<String, String> splitTypeAndContent(String logString) {
         // DOTALL allows . to match newlines, which may be present in the SQL string
-        Pattern pattern = Pattern.compile("^(.*?):\s+(.*?)$", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(logString);
-        if (matcher.find()) {
-            String type = matcher.group(1);
-            String content = matcher.group(2);
-            return Pair.of(type, content);
+        String[] components = logString.split(": ");
+        if (components.length == 2) {
+            return Pair.of(components[0], components[1]);
         } else {
             return null;
         }

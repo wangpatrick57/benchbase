@@ -88,7 +88,7 @@ public class DynamicProcedure extends Procedure {
             replayTransaction.removeSQLStmtCall();
         }
 
-        if (replayTransaction.getShouldAbort()) {
+        if (replayTransaction.getShouldRollback()) {
             throw new UserAbortException("This transaction aborted in the replay file.");
         }
     }
