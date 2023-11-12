@@ -9,6 +9,9 @@ import com.oltpbenchmark.api.Loader;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.benchmarks.replay.procedures.DynamicProcedure;
 
+/**
+ * @author phw2
+ */
 public class ReplayBenchmark extends BenchmarkModule {
     public ReplayBenchmark(WorkloadConfiguration workConf) {
         super(workConf);

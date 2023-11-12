@@ -17,6 +17,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @author phw2
+ */
 public class ReplayWorker extends Worker<ReplayBenchmark> {
     
     private static final Logger LOG = LoggerFactory.getLogger(ReplayWorker.class);

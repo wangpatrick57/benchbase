@@ -31,13 +31,15 @@ import org.slf4j.LoggerFactory;
 import com.oltpbenchmark.DBWorkload;
 import com.oltpbenchmark.api.Procedure;
 
- /**
-  * A Procedure which can represent an arbitrary list of SQLStmts which
-  * is passed in as an argument at runtime.
-  * 
-  * The reason it takes in a list of SQLStmts is so that it can represent
-  * multi-statement transactions.
-  */
+/**
+ * A Procedure which can represent an arbitrary list of SQLStmts which
+ * is passed in as an argument at runtime.
+ * 
+ * The reason it takes in a list of SQLStmts is so that it can represent
+ * multi-statement transactions.
+ * 
+ * @author phw2
+ */
 public class DynamicProcedure extends Procedure {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamicProcedure.class);

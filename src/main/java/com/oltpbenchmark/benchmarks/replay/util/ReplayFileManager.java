@@ -8,12 +8,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.RandomAccessFile;
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -42,6 +40,10 @@ import com.oltpbenchmark.util.Pair;
 
 // ReplayFileManager provides a queue-like interface over a replay file.
 // This currently only works for Postgres' log file format.
+
+/**
+ * @author phw2
+ */
 public class ReplayFileManager {
     private static final Logger LOG = LoggerFactory.getLogger(DBWorkload.class);
     private static final int PGLOG_LOG_TIME_INDEX = 0;
@@ -52,6 +54,7 @@ public class ReplayFileManager {
     private static final String COMMIT_REGEX = "COMMIT;?";
     private static final String ABORT_REGEX = "(ABORT|ROLLBACK);?";
     private static final String REPLAY_FILE_SECTION_DELIM = "###";
+    private static final FastLogDateTimeParser fastDTParser = new FastLogDateTimeParser();
 
     private String logFilePath;
     private String replayFilePath;
@@ -108,6 +111,7 @@ public class ReplayFileManager {
                 convertLogFileToReplayFile();
             }
             loadReplayFile();
+            throw new RuntimeException("early exit");
         }
     }
 
@@ -147,7 +151,7 @@ public class ReplayFileManager {
                     // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
-                    long logTime = ReplayFileManager.dtStringToNanoTime(logTimeString);
+                    long logTime = this.fastDTParser.dtStringToNanoTime(logTimeString);
                     String messageString = fields[PGLOG_MESSAGE_INDEX];
                     String sqlString = ReplayFileManager.parseSQLFromMessage(messageString);
                     if (sqlString == null) {
@@ -378,14 +382,6 @@ public class ReplayFileManager {
 
             this.replayTransactionQueue.remove();
         }
-    }
-
-    private static long dtStringToNanoTime(String dtString) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z", Locale.US);
-        ZonedDateTime zdt = ZonedDateTime.parse(dtString, formatter);
-        Instant instant = zdt.toInstant();
-        long nanoseconds = instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
-        return nanoseconds;        
     }
 
     /**
