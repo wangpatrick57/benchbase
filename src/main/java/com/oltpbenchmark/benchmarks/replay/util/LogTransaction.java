@@ -13,7 +13,7 @@ public class LogTransaction {
     // A SQLStmtLine represents a single SQL statement line to write to the replay file
     private static class SQLStmtLine {
         private String sqlStmtOutputString;
-        private String paramsString;
+        private String detailString;
         private long callTime;
 
         /**
@@ -21,9 +21,9 @@ public class LogTransaction {
          * @param params    The string of parameters of this SQL line in the log file
          * @param callTime  The timestamp, in nanoseconds, of this statement's line in the log file
          */
-        private SQLStmtLine(int sqlStmtID, String paramsString, long callTime) {
+        private SQLStmtLine(int sqlStmtID, String detailString, long callTime) {
             this.sqlStmtOutputString = Integer.toString(sqlStmtID);
-            this.paramsString = paramsString;
+            this.detailString = detailString;
             this.callTime = callTime;
         }
 
@@ -32,14 +32,14 @@ public class LogTransaction {
          * @param params        The string of parameters of this SQL line in the log file
          * @param callTime      The timestamp, in nanoseconds, of this statement's line in the log file
          */
-        private SQLStmtLine(String sqlStmtString, String paramsString, long callTime) {
+        private SQLStmtLine(String sqlStmtString, String detailString, long callTime) {
             this.sqlStmtOutputString = sqlStmtString;
-            this.paramsString = paramsString;
+            this.detailString = detailString;
             this.callTime = callTime;
         }
 
         private String getFormattedString() {
-            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.paramsString);
+            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.detailString);
         }
     }
 
@@ -65,12 +65,12 @@ public class LogTransaction {
         return isComplete;
     }
 
-    public void addSQLStmtLine(int sqlStmtID, String paramsString, long callTime) {
-        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtID, paramsString, callTime));
+    public void addSQLStmtLine(int sqlStmtID, String detailString, long callTime) {
+        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtID, detailString, callTime));
     }
 
-    public void addSQLStmtLine(String sqlStmtString, String paramsString, long callTime) {
-        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtString, paramsString, callTime));
+    public void addSQLStmtLine(String sqlStmtString, String detailString, long callTime) {
+        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtString, detailString, callTime));
     }
 
     public String getFormattedString() {

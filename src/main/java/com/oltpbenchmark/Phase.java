@@ -195,7 +195,7 @@ public class Phase {
 
     /**
      * Check whether the next replay transaction is in the past.
-     * May block if ReplayFileQueue blocks.
+     * May block if ReplayFileManager blocks.
      * @return Whether the next replay transaction is in the past
      */
     public boolean isNextReplayTransactionInPast() {
@@ -261,7 +261,7 @@ public class Phase {
 
     /**
      * Generates the next submitted procedure for this phase
-     * In replay phases, it may block if ReplayFileQueue blocks.
+     * In replay phases, it may block if ReplayFileManager blocks.
      * @return The next SubmittedProcedure to run for this phase
      */
     public SubmittedProcedure generateSubmittedProcedure() {
