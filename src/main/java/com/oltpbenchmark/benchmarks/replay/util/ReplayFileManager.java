@@ -127,6 +127,8 @@ public class ReplayFileManager {
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Log file " + this.logFilePath + " does not exist");
         }
+        long fnStartTime = System.nanoTime();
+        long totalInLoopComputeTime = 0;
         try (FileWriter replayFileWriter = new FileWriter(this.replayFilePath)) {
             try {
                 Queue<LogTransaction> logTransactionQueue = new LinkedList<>();
@@ -141,6 +143,7 @@ public class ReplayFileManager {
                 String[] fields;
                 int lastProgressPercent = -1;
                 while ((fields = logCSVReader.readNext()) != null) {
+                    long loopStartTime = System.nanoTime();
                     // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
@@ -196,12 +199,15 @@ public class ReplayFileManager {
                     // write a log transaction if it is completed and it it as the start of logTransactionQueue
                     while (!logTransactionQueue.isEmpty() && logTransactionQueue.peek().getIsComplete()) {
                         LogTransaction logTransaction = logTransactionQueue.peek();
+                        totalInLoopComputeTime += System.nanoTime() - loopStartTime;
                         replayFileWriter.write(logTransaction.getFormattedString());
+                        loopStartTime = System.nanoTime();
                         logTransactionQueue.remove();
                     }
 
                     long bytesRead = logInputStream.getChannel().position();
                     lastProgressPercent = ConsoleUtil.printProgressBar(bytesRead, totalBytes, lastProgressPercent);
+                    totalInLoopComputeTime += System.nanoTime() - loopStartTime;
                 }
                 System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
 
@@ -235,6 +241,8 @@ public class ReplayFileManager {
             replayFile.delete();
             throw e;
         }
+        System.out.printf("The whole function took %.4fms\n", (double)(System.nanoTime() - fnStartTime) / 1000000);
+        System.out.printf("We spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
     }
 
     private void loadReplayFile() {
