@@ -15,7 +15,7 @@ fi
 # [Invariant] lab_log.csv will be correctly set
 
 # reset DB
-if false; then
+if true; then
   "$RESET_FPATH"
 fi
 

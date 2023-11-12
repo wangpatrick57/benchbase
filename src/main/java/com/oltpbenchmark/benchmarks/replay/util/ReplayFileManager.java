@@ -1,6 +1,7 @@
 package com.oltpbenchmark.benchmarks.replay.util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -74,14 +75,40 @@ public class ReplayFileManager {
 
     public void load() {
         synchronized (this) {
-            LOG.info("Converting the log file " + logFilePath + " into the replay file " + replayFilePath);
-            convertLogFileToReplayFile();
-            LOG.info("Loading the replay file " + replayFilePath);
+            File logFile = new File(logFilePath);
+            File replayFile = new File(replayFilePath);
+            boolean doConvert;
+
+            if (logFile.exists() && replayFile.exists()) {
+                long lastLogModified = logFile.lastModified();
+                long lastReplayModified = replayFile.lastModified();
+
+                if (lastLogModified >= lastReplayModified) {
+                    LOG.info("Log file last modified at " + Long.toString(lastLogModified) + ", which is later than when replay file was last modified (" + Long.toString(lastReplayModified) + "). Will convert again.");
+                    doConvert = true;
+                } else {
+                    LOG.info("Log file last modified at " + Long.toString(lastLogModified) + ", which is earlier than when replay file was last modified (" + Long.toString(lastReplayModified) + "). Will not convert.");
+                    doConvert = false;
+                }
+            } else if (!logFile.exists() && replayFile.exists()) {
+                LOG.info("Log file doesn't exist but replay file does. Will assume that user already converted to this replay file and then deleted the original log file, so will just directly use the replay file.");
+                doConvert = false;
+            } else if (logFile.exists() && !replayFile.exists()) {
+                LOG.info("Replay file doesn't exist but log file does. Will convert log file to replay file.");
+                doConvert = true;
+            } else {
+                throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
+            }
+
+            if (doConvert) {
+                convertLogFileToReplayFile();
+            }
             loadReplayFile();
         }
     }
 
     private void convertLogFileToReplayFile() {
+        LOG.info("Converting the log file " + logFilePath + " into the replay file " + replayFilePath + "...");
         CSVReader logFileReader;
         try {
             // CSVReader handles CSV values which have newlines embedded in them
@@ -189,6 +216,7 @@ public class ReplayFileManager {
     }
 
     private void loadReplayFile() {
+        LOG.info("Loading the replay file " + replayFilePath + "...");
         CSVReader replayFileReader;
         try {
             // CSVReader handles CSV values which have newlines embedded in them
