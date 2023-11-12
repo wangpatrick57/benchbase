@@ -464,10 +464,22 @@ public class ReplayFileManager {
             String detailContent = typeAndContent.second;
 
             if (detailType.equals("parameters")) {
-                String[] detailContentComponents = detailContent.split("'");
-                for (int i = 1; i < detailContentComponents.length; i += 1) {
-                    String component = detailContentComponents[i];
-                    valuesList.add(ReplayFileManager.parseSQLLogStringToObject(component));
+                StringBuilder currentParamStr = new StringBuilder();
+                boolean isInQuotes = false;
+                for (int i = 0; i < detailContent.length(); i++) {
+                    char c = detailContent.charAt(i);
+                    if (isInQuotes) {
+                        if (c == '\'') {
+                            valuesList.add(ReplayFileManager.parseSQLLogStringToObject(currentParamStr.toString()));
+                            isInQuotes = false;
+                        } else {
+                            currentParamStr.append(c);
+                        }
+                    } else {
+                        if (c == '\'') {
+                            isInQuotes = true;
+                        }
+                    }
                 }
             }
         }
