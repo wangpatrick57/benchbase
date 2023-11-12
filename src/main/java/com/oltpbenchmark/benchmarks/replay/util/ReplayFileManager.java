@@ -12,6 +12,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -55,6 +56,7 @@ public class ReplayFileManager {
     private static final String ABORT_REGEX = "(ABORT|ROLLBACK);?";
     private static final String REPLAY_FILE_SECTION_DELIM = "###";
     private static final FastLogDateTimeParser fastDTParser = new FastLogDateTimeParser();
+    private static final DateTimeFormatter staticFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z", Locale.US);
 
     private String logFilePath;
     private String replayFilePath;
@@ -133,6 +135,8 @@ public class ReplayFileManager {
         }
         long fnStartTime = System.nanoTime();
         long totalInLoopComputeTime = 0;
+        long totalTimeInDTParsing = 0;
+        long numDTsParsed = 0;
         try (FileWriter replayFileWriter = new FileWriter(this.replayFilePath)) {
             try {
                 Queue<LogTransaction> logTransactionQueue = new LinkedList<>();
@@ -151,7 +155,10 @@ public class ReplayFileManager {
                     // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
-                    long logTime = this.fastDTParser.dtStringToNanoTime(logTimeString);
+                    long dtParseStartTime = System.nanoTime();
+                    long logTime = fastDTParser.dtStringToNanoTime(logTimeString);
+                    totalTimeInDTParsing += System.nanoTime() - dtParseStartTime;
+                    numDTsParsed++;
                     String messageString = fields[PGLOG_MESSAGE_INDEX];
                     String sqlString = ReplayFileManager.parseSQLFromMessage(messageString);
                     if (sqlString == null) {
@@ -247,6 +254,15 @@ public class ReplayFileManager {
         }
         System.out.printf("The whole function took %.4fms\n", (double)(System.nanoTime() - fnStartTime) / 1000000);
         System.out.printf("We spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
+        System.out.printf("We spent %dns doing parsing %d datetimes\n", totalTimeInDTParsing, numDTsParsed);
+    }
+
+    private long dtStringToNanoTime(String dtString) {
+        //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z", Locale.US);
+        ZonedDateTime zdt = ZonedDateTime.parse(dtString, staticFormatter);
+        Instant instant = zdt.toInstant();
+        long nanoseconds = instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
+        return nanoseconds;
     }
 
     private void loadReplayFile() {
