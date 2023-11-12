@@ -18,12 +18,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.opencsv.CSVParser;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
@@ -106,9 +108,9 @@ public class ReplayFileManager {
 
             if (doConvert) {
                 convertLogFileToReplayFile();
-                throw new RuntimeException("early exit");
             }
             loadReplayFile();
+            throw new RuntimeException("early exit");
         }
     }
 
@@ -128,6 +130,7 @@ public class ReplayFileManager {
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Log file " + this.logFilePath + " does not exist");
         }
+        long fnStartTime = System.nanoTime();
         long totalInLoopComputeTime = 0;
         try (FileWriter replayFileWriter = new FileWriter(this.replayFilePath)) {
             try {
@@ -196,6 +199,7 @@ public class ReplayFileManager {
                     totalInLoopComputeTime += System.nanoTime() - loopInnerStartTime;
                 }
                 System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
+                System.out.printf("The whole function took %.4fms\n", (double)(System.nanoTime() - fnStartTime) / 1000000);
                 System.out.printf("The whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
                 System.out.printf("We spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
 
@@ -217,10 +221,19 @@ public class ReplayFileManager {
                 }
 
                 // write sqlStringIDs to the file as well
+                // in the current implementation, it's possible to write sqlStringIDs before writing replay transactions
+                // however, I chose to write sqlStringIDs after to allow for implementations where we write replay transactions
+                // to the replay file during the loop where we're reading from the log file
                 replayFileWriter.write(REPLAY_FILE_SECTION_DELIM + "\n");
                 for (Map.Entry<String, Integer> entry : sqlStringIDs.entrySet()) {
                     int sqlStmtID = entry.getValue();
                     String sqlString = entry.getKey();
+                    // a weird edge case with CSVReader is that it replaces two consecutive " characters inside a quoted string with a single " character
+                    // I couldn't figure out how to configure CSVReader to not have this behavior
+                    // this line doesn't solve all instances of this edge case but it does solve the one which shows up in the TPCC log file
+                    // solving this edge case in general is difficult because we need to detect whether a lone " is supposed to be a terminal " or not (I
+                    // have no idea how CSVReader can detect this but my guess is they say any " followed by a , is a terminal ")
+                    sqlString = sqlString.replaceAll("'\"'", "'\"\"'");
                     replayFileWriter.write(Integer.toString(sqlStmtID));
                     replayFileWriter.write(",");
                     replayFileWriter.write("\"" + sqlString + "\"");
@@ -229,7 +242,7 @@ public class ReplayFileManager {
             } catch (CsvValidationException e) {
                 throw new RuntimeException("Log file not in a valid CSV format");
             } catch (IOException e) {
-                throw new RuntimeException("I/O exception when reading log file");
+                throw new RuntimeException("I/O exception " + e + " when reading log file");
             }
         // delete the replay file in all error cases since the file won't be finished
         } catch (FileNotFoundException e) {
@@ -246,10 +259,10 @@ public class ReplayFileManager {
 
     private void loadReplayFile() {
         LOG.info("Loading the replay file " + replayFilePath + "...");
-        CSVReader replayFileReader;
+        CSVReader replayCSVReader;
         try {
             // CSVReader handles CSV values which have newlines embedded in them
-            replayFileReader = new CSVReader(new BufferedReader(new FileReader(replayFilePath)));
+            replayCSVReader = new CSVReader(new BufferedReader(new FileReader(replayFilePath)));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Replay file " + replayFilePath + " does not exist");
         }
@@ -261,7 +274,8 @@ public class ReplayFileManager {
             String[] fields;
 
             // read replay transaction section of file
-            while ((fields = replayFileReader.readNext()) != null) {
+            long loopOuterStartTime = System.nanoTime();
+            while ((fields = replayCSVReader.readNext()) != null) {
                 if (fields.length == 1 && fields[0].equals(REPLAY_FILE_SECTION_DELIM)) {
                     break;
                 }
@@ -305,9 +319,10 @@ public class ReplayFileManager {
                     }
                 }
             }
+            System.out.printf("The whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
 
             // read SQL statement cache section of file
-            while ((fields = replayFileReader.readNext()) != null) {
+            while ((fields = replayCSVReader.readNext()) != null) {
                 String sqlStmtIDString = fields[0];
                 int sqlStmtID = Integer.parseInt(sqlStmtIDString);
                 String sqlString = fields[1];
@@ -332,9 +347,9 @@ public class ReplayFileManager {
 
             hasSuccessfullyLoaded = true;
         } catch (CsvValidationException e) {
-            throw new RuntimeException("Log file not in a valid CSV format");
+            throw new RuntimeException("Replay file not in a valid CSV format");
         } catch (IOException e) {
-            throw new RuntimeException("I/O exception when reading log file");
+            throw new RuntimeException("I/O exception " + e + " when reading replay file");
         }
     }
 
