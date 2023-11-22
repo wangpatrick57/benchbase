@@ -106,11 +106,49 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
+            scanThroughLogFile();
+            scanThroughReplayFile();
             if (doConvert) {
                 convertLogFileToReplayFile();
             }
             loadReplayFile();
             throw new RuntimeException("early exit");
+        }
+    }
+
+    private void scanThroughLogFile() {
+        FileInputStream logInputStream;
+        try {
+            logInputStream = new FileInputStream(this.logFilePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Log file " + this.logFilePath + " does not exist");
+        }
+
+        try (BufferedReader logBufferedReader = new BufferedReader(new InputStreamReader(logInputStream))) {
+            String line;
+            long loopOuterStartTime = System.nanoTime();
+            while ((line = logBufferedReader.readLine()) != null) {}
+            System.out.printf("scanThroughLogFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
+        }
+    }
+
+    private void scanThroughReplayFile() {
+        FileInputStream replayInputStream;
+        try {
+            replayInputStream = new FileInputStream(this.replayFilePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Replay file " + this.replayFilePath + " does not exist");
+        }
+
+        try (BufferedReader replayBufferedReader = new BufferedReader(new InputStreamReader(replayInputStream))) {
+            String line;
+            long loopOuterStartTime = System.nanoTime();
+            while ((line = replayBufferedReader.readLine()) != null) {}
+            System.out.printf("scanThroughReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
         }
     }
 
@@ -130,7 +168,7 @@ public class ReplayFileManager {
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Log file " + this.logFilePath + " does not exist");
         }
-        long fnStartTime = System.nanoTime();
+
         long totalInLoopComputeTime = 0;
         try (FileWriter replayFileWriter = new FileWriter(this.replayFilePath)) {
             try {
@@ -170,7 +208,7 @@ public class ReplayFileManager {
                         // in the output replay file, replay transactions are ordered by the time they first appear in the log file
                         logTransactionQueue.add(newExplicitLogTransaction);
                     } else if (sqlString.equals(COMMIT_STRING) || sqlString.equals(ROLLBACK_STRING)) {
-                        assert(!activeTransactions.containsKey(vxid));
+                        assert(activeTransactions.containsKey(vxid));
                         LogTransaction explicitLogTransaction = activeTransactions.get(vxid);
                         explicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
                         explicitLogTransaction.markComplete();
@@ -199,9 +237,8 @@ public class ReplayFileManager {
                     totalInLoopComputeTime += System.nanoTime() - loopInnerStartTime;
                 }
                 System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
-                System.out.printf("The whole function took %.4fms\n", (double)(System.nanoTime() - fnStartTime) / 1000000);
-                System.out.printf("The whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
-                System.out.printf("We spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
+                System.out.printf("convertLogFileToReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
+                System.out.printf("convertLogFileToReplayFile: we spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
 
                 // write all transactions at the end instead of inside the loop so that both the log file
                 // read and the replay file write can be sequential 
@@ -319,7 +356,7 @@ public class ReplayFileManager {
                     }
                 }
             }
-            System.out.printf("The whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
+            System.out.printf("loadReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
 
             // read SQL statement cache section of file
             while ((fields = replayCSVReader.readNext()) != null) {
