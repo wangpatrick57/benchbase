@@ -4,14 +4,18 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
-// A class to efficiently parse date time strings in log files
-// This class was created because date time parsing, even using the modern java.time package, took 50% of total compute time when reading a log file
-// It is only efficient assuming it is asked to parse date time strings in ascending timestamp order
-// Also is only efficient assuming that the timestamps span a very small number of unique dates
-// Not thread-safe
-
 /**
  * @author phw2
+ * @brief A class to efficiently parse date time strings in log files
+ * 
+ * @detail
+ * This class was created because date time parsing, even using the modern java.time package, took 50% of total compute time when reading a log file
+ * It is only efficient assuming (1) it is asked to parse date time strings in ascending timestamp order and (2) the timestamps span a small number of unique dates
+ * 
+ * @usage
+ * Do not instantiate the class each time you call dtStringToNanoTime(). Instantiate it once so that it can do caching
+ * Multiple calls to dtStringToNanoTime() on the same instance are not thread-safe
+ * Multiple calls to dtStringToNanoTime() on the different instances are thread-safe
  */
 public class FastLogDateTimeParser {
     private String lastDateZeroTimeString;
