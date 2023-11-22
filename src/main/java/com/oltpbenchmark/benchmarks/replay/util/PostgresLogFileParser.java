@@ -28,7 +28,10 @@ import com.oltpbenchmark.util.Pair;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
-public class PostgresLogFileParser {
+/**
+ * @author phw2
+ */
+public class PostgresLogFileParser implements LogFileParser {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresLogFileParser.class);
     private static final int PGLOG_LOG_TIME_INDEX = 0;
     private static final int PGLOG_VXID_INDEX = 9;
@@ -37,9 +40,19 @@ public class PostgresLogFileParser {
     private static final String BEGIN_STRING = "BEGIN";
     private static final String COMMIT_STRING = "COMMIT";
     private static final String ROLLBACK_STRING = "ROLLBACK";
-    private static final FastLogDateTimeParser fastDTParser = new FastLogDateTimeParser();
+    private final FastLogDateTimeParser fastDTParser;
 
-    public static void convertLogFileToReplayFile(String logFilePath, String replayFilePath) {
+    /**
+     * @brief Construct a PostgresLogFileParser instance
+     * 
+     * convertLogFileToReplayFile() is thread-safe when called on different PostgresLogFileParser instances
+     */
+    public PostgresLogFileParser() {
+        this.fastDTParser = new FastLogDateTimeParser();
+    }
+
+    @Override
+    public void convertLogFileToReplayFile(String logFilePath, String replayFilePath) {
         LOG.info("Converting the log file " + logFilePath + " into the replay file " + replayFilePath + "...");
         File logFile = new File(logFilePath);
         File replayFile = new File(replayFilePath);
@@ -76,7 +89,7 @@ public class PostgresLogFileParser {
                     // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                     // because sometimes transactions are built from multiple lines
                     String logTimeString = fields[PGLOG_LOG_TIME_INDEX];
-                    long logTime = fastDTParser.dtStringToNanoTime(logTimeString);
+                    long logTime = this.fastDTParser.dtStringToNanoTime(logTimeString);
                     String messageString = fields[PGLOG_MESSAGE_INDEX];
                     String sqlString = PostgresLogFileParser.parseSQLFromMessage(messageString);
                     if (sqlString == null) {

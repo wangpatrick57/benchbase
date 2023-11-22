@@ -92,7 +92,8 @@ public class ReplayFileManager {
             csvReaderScan(this.logFilePath);
             csvReaderScan(this.replayFilePath);
             if (doConvert) {
-                PostgresLogFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
+                LogFileParser logFileParser = new PostgresLogFileParser();
+                logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
             }
             loadReplayFile();
             // throw new RuntimeException("early exit");
