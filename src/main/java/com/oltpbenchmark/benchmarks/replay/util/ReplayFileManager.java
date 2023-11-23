@@ -20,7 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.oltpbenchmark.api.SQLStmt;
+import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader;
 import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
+import com.oltpbenchmark.util.ConsoleUtil;
 
 /**
  * @brief ReplayFileManager orchestrates log-to-replay conversion, reading the replay file, and building the in-memory txn queue
@@ -171,77 +173,65 @@ public class ReplayFileManager {
      */
     private void loadReplayFile() {
         LOG.info("Loading the replay file " + this.replayFilePath + "...");
+        File replayFile = new File(this.replayFilePath);
+        long totalBytes = replayFile.length();
         
+        FileInputStream replayInputStream;
         CSVReader replayCSVReader; // PAT DEBUG: here temporarily for SQL statement parsing
         try {
+            replayInputStream = new FileInputStream(this.replayFilePath);
             replayCSVReader = new CSVReader(new InputStreamReader(new FileInputStream(this.replayFilePath)));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Replay file " + this.replayFilePath + " does not exist");
         }
+        InputStreamReader replayInputStreamReader = new InputStreamReader(replayInputStream);
 
-        try (FastReplayFileReader replayFileReader = new FastReplayFileReader(this.replayFilePath)) {
+        try (FastReplayFileReader replayFileReader = new FastReplayFileReader(replayInputStreamReader, ReplayFileManager.CBUF_MAX_SIZE)) {
             this.sqlStmtCache = new HashMap<>();
             this.replayTransactionQueue = new LinkedList<>();
             ReplayTransaction currentActiveTransaction = null;
-            char[] cbuf = new char[ReplayFileManager.CBUF_MAX_SIZE];
-            int newReadOffset = 0;
-            int numReadBytes;
+            ReplayFileLine replayFileLine;
 
-            long loopOuterStartTime = System.nanoTime();
             // Read replay transaction section of file
             // the outer loop fills cbuf. cbuf may contain the start of a line which was not complete in the last cbuf
-            while ((numReadBytes = replayInputStreamReader.read(cbuf, newReadOffset, ReplayFileManager.CBUF_MAX_SIZE - newReadOffset)) != -1) {
-                assert(newReadOffset >= 0);
-                assert(newReadOffset <= ReplayFileManager.CBUF_MAX_SIZE);
-                assert(numReadBytes >= 0);
-                // the inner loop loops through all completed lines in cbuf. if there is an incomplete line at the end
-                // of cbuf, it copies it to the start of cbuf and sets newReadOffset accordingly
-                int parseLineStartOffset = 0;
-                int cbufSize = newReadOffset + numReadBytes;
-
-                while (parseLineStartOffset < cbufSize) {
-                    // try to parse the line starting from parseLineStartOffset
-                    ReplayFileLine replayFileLine = parseReplayFileLine(cbuf, parseLineStartOffset, cbufSize);
-                    if (replayFileLine == null) {
-                        int numUnfinishedChars = cbufSize - parseLineStartOffset;
-                        newReadOffset = numUnfinishedChars;
-                        System.arraycopy(cbuf, parseLineStartOffset, cbuf, 0, numUnfinishedChars);
-                        break;
+            long loopOuterStartTime = System.nanoTime();
+            int lastProgressPercent = -1;
+            while ((replayFileLine = replayFileReader.readLine()) != null) {
+                if (replayFileLine.sqlStmtIDOrString.equals(BEGIN_STRING)) {
+                    if (currentActiveTransaction != null) {
+                        throw new RuntimeException("Found BEGIN when previous transaction hadn't ended yet");
                     }
-                    parseLineStartOffset = replayFileLine.endParseOffset + 1;
+                    currentActiveTransaction = new ReplayTransaction(replayFileLine.logTime, true);
+                } else if (replayFileLine.sqlStmtIDOrString.equals(COMMIT_STRING) || replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING)) {
+                    if (currentActiveTransaction == null) {
+                        throw new RuntimeException("Found COMMIT or ROLLBACK when there is no active transaction");
+                    }
+                    currentActiveTransaction.setShouldRollback(replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING));
+                    replayTransactionQueue.add(currentActiveTransaction);
+                    currentActiveTransaction = null;
+                } else {
+                    int sqlStmtID = Integer.parseInt(replayFileLine.sqlStmtIDOrString);
+                    if (!sqlStmtCache.containsKey(sqlStmtID)) {
+                        // put a placeholder SQLStmt for now. later, when we read the sqlStmtCache section
+                        // of the replay file, we'll fill in the strings in the sqlStmtCache
+                        sqlStmtCache.put(sqlStmtID, new SQLStmt(""));
+                    }
+                    SQLStmt sqlStmt = sqlStmtCache.get(sqlStmtID);
 
-                    if (replayFileLine.sqlStmtIDOrString.equals(BEGIN_STRING)) {
-                        if (currentActiveTransaction != null) {
-                            throw new RuntimeException("Found BEGIN when previous transaction hadn't ended yet");
-                        }
-                        currentActiveTransaction = new ReplayTransaction(replayFileLine.logTime, true);
-                    } else if (replayFileLine.sqlStmtIDOrString.equals(COMMIT_STRING) || replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING)) {
-                        if (currentActiveTransaction == null) {
-                            throw new RuntimeException("Found COMMIT or ROLLBACK when there is no active transaction");
-                        }
-                        currentActiveTransaction.setShouldRollback(replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING));
-                        replayTransactionQueue.add(currentActiveTransaction);
-                        currentActiveTransaction = null;
+                    if (currentActiveTransaction != null) {
+                        currentActiveTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
                     } else {
-                        int sqlStmtID = Integer.parseInt(replayFileLine.sqlStmtIDOrString);
-                        if (!sqlStmtCache.containsKey(sqlStmtID)) {
-                            // put a placeholder SQLStmt for now. later, when we read the sqlStmtCache section
-                            // of the replay file, we'll fill in the strings in the sqlStmtCache
-                            sqlStmtCache.put(sqlStmtID, new SQLStmt(""));
-                        }
-                        SQLStmt sqlStmt = sqlStmtCache.get(sqlStmtID);
-
-                        if (currentActiveTransaction != null) {
-                            currentActiveTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
-                        } else {
-                            // if there's isn't a current active transaction, it must be an implicit transaction
-                            ReplayTransaction implicitReplayTransaction = new ReplayTransaction(replayFileLine.logTime, false);
-                            implicitReplayTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
-                            replayTransactionQueue.add(implicitReplayTransaction);
-                        }
+                        // if there's isn't a current active transaction, it must be an implicit transaction
+                        ReplayTransaction implicitReplayTransaction = new ReplayTransaction(replayFileLine.logTime, false);
+                        implicitReplayTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
+                        replayTransactionQueue.add(implicitReplayTransaction);
                     }
                 }
+
+                long bytesRead = replayInputStream.getChannel().position();
+                lastProgressPercent = ConsoleUtil.printProgressBar(bytesRead, totalBytes, lastProgressPercent);
             }
+            System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
             System.out.printf("loadReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
             System.out.printf("loadReplayFile: the whole loop added %d txns\n", replayTransactionQueue.size());
 

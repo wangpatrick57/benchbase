@@ -1,12 +1,12 @@
 package com.oltpbenchmark.benchmarks.replay.util;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.List;
-
-import com.opencsv.CSVReader;
 
 /**
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
@@ -30,23 +30,15 @@ public class FastReplayFileReader implements java.lang.AutoCloseable {
         }
     }
 
-    private String replayFilePath;
-    private FileInputStream replayInputStream;
-    private InputStreamReader replayInputStreamReader;
+    private Reader replayReader;
     private int cbufMaxSize;
     private char[] cbuf;
     private int cbufSize;
     private int parseLineStartOffset;
     private int newReadOffset = 0;
 
-    public FastReplayFileReader(String replayFilePath, int cbufMaxSize) {
-        this.replayFilePath = replayFilePath;
-        try {
-            this.replayInputStream = new FileInputStream(this.replayFilePath);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("Replay file " + this.replayFilePath + " does not exist");
-        }
-        this.replayInputStreamReader = new InputStreamReader(this.replayInputStream);
+    public FastReplayFileReader(Reader reader, int cbufMaxSize) {
+        this.replayReader = reader;
 
         this.cbufMaxSize = cbufMaxSize;
         this.cbuf = new char[this.cbufMaxSize];
@@ -60,22 +52,24 @@ public class FastReplayFileReader implements java.lang.AutoCloseable {
      * @return The read ReplayFileLine, or null if the last line was already read
      */
     public ReplayFileLine readLine() throws IOException {
-        ReplayFileLine replayFileLine = parseReplayFileLine(this.cbuf, this.parseLineStartOffset, this.cbufSize);
+        ReplayFileLine replayFileLine = parseReplayTxnLine(this.cbuf, this.parseLineStartOffset, this.cbufSize);
 
         // happy path: return the next replay file line in cbuf
         if (replayFileLine != null) {
+            this.parseLineStartOffset = replayFileLine.endParseOffset + 1;
             return replayFileLine;
         }
 
         // move incomplete chars in cbuf over and load cbuf again
-        while (replayFileLine == null) {
-            // move chars
+        while (true) {
+            // move incomplete chars
             int numUnfinishedChars = this.cbufSize - this.parseLineStartOffset;
+            assert(numUnfinishedChars >= 0); // should never be negative
             this.newReadOffset = numUnfinishedChars;
             System.arraycopy(cbuf, parseLineStartOffset, cbuf, 0, numUnfinishedChars);
 
             // load cbuf
-            int numReadBytes = replayInputStreamReader.read(cbuf, newReadOffset, this.cbufMaxSize - newReadOffset);
+            int numReadBytes = replayReader.read(cbuf, newReadOffset, this.cbufMaxSize - newReadOffset);
             // TODO: handle numReadBytes == 0
             // this means we've read the entire file
             if (numReadBytes == -1) {
@@ -89,25 +83,27 @@ public class FastReplayFileReader implements java.lang.AutoCloseable {
             this.parseLineStartOffset = 0; // reset every time we reload cbuf
             this.cbufSize = newReadOffset + numReadBytes;
 
-            // try to read again
-            replayFileLine = parseReplayFileLine(this.cbuf, this.parseLineStartOffset, this.cbufSize);
+            // try to read again, returning if successful
+            replayFileLine = parseReplayTxnLine(this.cbuf, this.parseLineStartOffset, this.cbufSize);
+            if (replayFileLine != null) {
+                this.parseLineStartOffset = replayFileLine.endParseOffset + 1;
+                return replayFileLine;
+            }
         }
-        return replayFileLine;
     }
 
     @Override
-    public void close() throws Exception {
-        this.replayInputStreamReader.close();
+    public void close() throws IOException {
+        this.replayReader.close();
     }
 
-    // TODO: test that it parses the last line correctly (even though the last line may not have a '\n')
     /**
      * @brief Parses the next ReplayFileLine in cbuf if possible
      * @param cbuf A char buffer to parse from
      * @param startOffset The starting offset to parse from
      * @return The parsed ReplayFileLine, or null if the line wasn't complete
      */
-    public static ReplayFileLine parseReplayFileLine(char[] cbuf, int startOffset, int cbufSize) {
+    public static ReplayFileLine parseReplayTxnLine(char[] cbuf, int startOffset, int cbufSize) {
         if (startOffset >= cbufSize) {
             return null;
         }
@@ -142,6 +138,6 @@ public class FastReplayFileReader implements java.lang.AutoCloseable {
         assert(cbuf[endOffsets[1] + 1] == '"' && cbuf[endOffsets[2] - 1] == '"');
         String detailString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
         List<Object> params = PostgresLogFileParser.parseParamsFromDetail(detailString);
-        return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2] + 1);
+        return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2]);
     }
 }
