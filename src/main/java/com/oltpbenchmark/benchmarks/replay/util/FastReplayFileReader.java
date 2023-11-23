@@ -1,18 +1,15 @@
 package com.oltpbenchmark.benchmarks.replay.util;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.List;
+import java.lang.AutoCloseable;
 
 /**
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
  * @author phw2
  */
-public class FastReplayFileReader implements java.lang.AutoCloseable {
+public class FastReplayFileReader implements AutoCloseable {
     /**
      * @brief An object representation of a line in the replay file which is fully parsed but not yet processed
      */
