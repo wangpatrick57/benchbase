@@ -92,75 +92,14 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
-            // inputStreamReaderScan(this.logFilePath);
-            // inputStreamReaderScan(this.replayFilePath);
-            // bufferedReaderScan(this.logFilePath);
-            // bufferedReaderScan(this.replayFilePath);
-            // csvReaderScan(this.logFilePath);
-            // csvReaderScan(this.replayFilePath);
+            PrivateBench.run();
+
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
                 logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
             }
             loadReplayFile();
             throw new RuntimeException("early exit");
-        }
-    }
-
-    private void inputStreamReaderScan(String filePath) {
-        FileInputStream inputStream;
-        try {
-            inputStream = new FileInputStream(filePath);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("File " + filePath + " does not exist");
-        }
-
-        try (InputStreamReader inputStreamReader = new InputStreamReader(inputStream)) {
-            char[] cbuf = new char[4096];
-            int n;
-            long loopOuterStartTime = System.nanoTime();
-            while ((n = inputStreamReader.read(cbuf, 0, 4096)) == 4096) {}
-            System.out.printf("readerScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
-        } catch (IOException e) {
-            throw new RuntimeException("I/O exception " + e + " when reading log file");
-        }
-    }
-
-    private void bufferedReaderScan(String filePath) {
-        FileInputStream inputStream;
-        try {
-            inputStream = new FileInputStream(filePath);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("File " + filePath + " does not exist");
-        }
-
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-            String line;
-            long loopOuterStartTime = System.nanoTime();
-            while ((line = bufferedReader.readLine()) != null) {}
-            System.out.printf("readerScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
-        } catch (IOException e) {
-            throw new RuntimeException("I/O exception " + e + " when reading log file");
-        }
-    }
-
-    private void csvReaderScan(String filePath) {
-        FileInputStream inputStream;
-        try {
-            inputStream = new FileInputStream(filePath);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("File " + filePath + " does not exist");
-        }
-
-        try (CSVReader csvReader = new CSVReader(new BufferedReader(new InputStreamReader(inputStream)))) {
-            String[] fields;
-            long loopOuterStartTime = System.nanoTime();
-            while ((fields = csvReader.readNext()) != null) {}
-            System.out.printf("csvReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
-        } catch (CsvValidationException e) {
-            throw new RuntimeException("Log file not in a valid CSV format");
-        } catch (IOException e) {
-            throw new RuntimeException("I/O exception " + e + " when reading log file");
         }
     }
 

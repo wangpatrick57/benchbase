@@ -30,10 +30,10 @@ public class FastNumericParser {
     public static int hexCharToInt(char c) {
         if (c >= '0' && c <= '9') {
             return c - 48;
-        } else if (c >= 'A' && c <= 'F') {
-            return c - 65 + 10;
         } else if (c >= 'a' && c <= 'f') {
             return c - 97 + 10;
+        } else if (c >= 'A' && c <= 'F') {
+            return c - 65 + 10;
         } else {
             throw new RuntimeException(String.format("Invalid char (%c) passed to parseIntFromHexChar", c));
         }
