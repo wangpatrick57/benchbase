@@ -16,12 +16,12 @@ package com.oltpbenchmark.benchmarks.replay.util;
 public class FastNumericParser {
     private static final int HEX_BASE = 16;
 
-    public static long hexStringToLong(String hexString) {
+    public static long hexCBufToLong(char[] cbuf, int start, int end) {
         long out = 0;
 
-        for (int i = 0; i < hexString.length(); i++) {
+        for (int i = start; i < end; i++) {
             out *= FastNumericParser.HEX_BASE;
-            out += FastNumericParser.hexCharToInt(hexString.charAt(i));
+            out += FastNumericParser.hexCharToInt(cbuf[i]);
         }
 
         return out;
@@ -35,7 +35,7 @@ public class FastNumericParser {
         } else if (c >= 'a' && c <= 'f') {
             return c - 97 + 10;
         } else {
-            throw new RuntimeException("Invalid char passed to parseIntFromHexChar");
+            throw new RuntimeException(String.format("Invalid char (%c) passed to parseIntFromHexChar", c));
         }
     }
 }

@@ -21,11 +21,12 @@ public class TestFastNumericParser {
     }
 
     @Test
-    public void testHexStringToLong() throws Exception {
+    public void testHexCBufToLong() throws Exception {
         String[] hexStrings = {"1a3f201", "0", "aBcDeF", "0001f"};
 
         for (String hexString : hexStrings) {
-            assertEquals(FastNumericParser.hexStringToLong(hexString), Long.decode("0x" + hexString).longValue());
+            char[] cbuf = hexString.toCharArray();
+            assertEquals(FastNumericParser.hexCBufToLong(cbuf, 0, hexString.length()), Long.decode("0x" + hexString).longValue());
         }
     }
 }
