@@ -122,6 +122,7 @@ public class FastReplayFileReader implements AutoCloseable {
             } else if (endOffsetsI == 2 && cbuf[cbufI] == '\n') {
                 endOffsets[endOffsetsI] = cbufI;
                 endOffsetsI++;
+                break; // break early here so we don't end up reading the entire cbuf
             }
         }
 
