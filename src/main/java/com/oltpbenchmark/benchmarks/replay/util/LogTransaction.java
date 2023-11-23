@@ -2,10 +2,6 @@ package com.oltpbenchmark.benchmarks.replay.util;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
-
-import com.oltpbenchmark.api.SQLStmt;
 
 // A LogTransaction represents a single transaction to write to the replay file
 // These transactions are created by reading from the log file
@@ -39,7 +35,7 @@ public class LogTransaction {
         }
 
         private String getFormattedString() {
-            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.detailString);
+            return String.format("%s,\"%s\",\"%s\"", Long.toHexString(this.callTime), this.sqlStmtOutputString, this.detailString);
         }
     }
 

@@ -86,12 +86,12 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
-            inputStreamReaderScan(this.logFilePath);
-            inputStreamReaderScan(this.replayFilePath);
-            bufferedReaderScan(this.logFilePath);
-            bufferedReaderScan(this.replayFilePath);
-            csvReaderScan(this.logFilePath);
-            csvReaderScan(this.replayFilePath);
+            // inputStreamReaderScan(this.logFilePath);
+            // inputStreamReaderScan(this.replayFilePath);
+            // bufferedReaderScan(this.logFilePath);
+            // bufferedReaderScan(this.replayFilePath);
+            // csvReaderScan(this.logFilePath);
+            // csvReaderScan(this.replayFilePath);
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
                 logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
@@ -184,7 +184,7 @@ public class ReplayFileManager {
                 // we parse the line in ReplayFileManager instead of sending it to the constructor of ReplayTransaction
                 // because sometimes transactions are built from multiple lines
                 String logTimeString = fields[0];
-                long logTime = Long.parseLong(logTimeString);
+                long logTime = FastNumericParser.hexStringToLong(logTimeString);
                 String sqlStmtIDOrString = fields[1];
                 String detailString = fields[2];
                 List<Object> params = PostgresLogFileParser.parseParamsFromDetail(detailString);
