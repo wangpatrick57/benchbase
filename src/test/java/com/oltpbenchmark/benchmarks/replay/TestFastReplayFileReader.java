@@ -54,23 +54,23 @@ public class TestFastReplayFileReader {
     }
 
     /**
-     * @brief A class representation of a transaction line string
+     * @brief An object representation of a transaction line string
      * 
      * Convenient for generating strings and comparing them against ReplayFileLines.
      * Also convenient because changing the format of a transaction line string only requires
      * changing this one class, instead of changing all tests one-by-one.
      */
-    private static class TxnLineString {
+    private static class TxnStringObj {
         private static int DECIMAL_MAX = 10;
         private static int SQL_STMT_ID_MAX_LENGTH = 5;
         private static Random random = new Random();
 
-        public static TxnLineString generate() {
-            int sqlStmtIDLength = TxnLineString.random.nextInt(SQL_STMT_ID_MAX_LENGTH);
+        public static TxnStringObj generate() {
+            int sqlStmtIDLength = TxnStringObj.random.nextInt(SQL_STMT_ID_MAX_LENGTH);
             return generate(sqlStmtIDLength);
         }
 
-        public static TxnLineString generate(int sqlStmtIDLength) {
+        public static TxnStringObj generate(int sqlStmtIDLength) {
             long logTime = random.nextLong(Long.MAX_VALUE);
             String logTimeString = String.format("%016x", logTime);
 
@@ -81,14 +81,14 @@ public class TestFastReplayFileReader {
             String sqlStmtIDOrString = sqlStmtIDOrStringSB.toString();
 
             String paramsString = "";
-            return new TxnLineString(logTimeString, sqlStmtIDOrString, paramsString);
+            return new TxnStringObj(logTimeString, sqlStmtIDOrString, paramsString);
         }
 
         private String logTimeString;
         private String sqlStmtIDOrString;
         private String paramsString;
 
-        private TxnLineString(String logTimeString, String sqlStmtIDOrString, String paramsString) {
+        private TxnStringObj(String logTimeString, String sqlStmtIDOrString, String paramsString) {
             this.logTimeString = logTimeString;
             this.sqlStmtIDOrString = sqlStmtIDOrString;
             this.paramsString = paramsString;
@@ -112,37 +112,40 @@ public class TestFastReplayFileReader {
      */
     @Test
     public void testParseReplayTxnLineZeroStartContent() {
-        TxnLineString txnLineString = TxnLineString.generate();
-        String txnString = txnLineString.toString(true);
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
         char[] cbuf = txnString.toCharArray();
         ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, txnString.length());
-        assertTrue(txnLineString.equalsReplayFileLine(replayFileLine));
+        assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
     }
 
     @Test
     public void testParseReplayTxnLineNonZeroStartContent() {
-        TxnLineString txnLineString = TxnLineString.generate();
-        String txnString = txnLineString.toString(true);
-        String prefix = "hihi\n";
-        String cbufString = String.format("%s%s", prefix, txnString);
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String extraChars = "hihi\n";
+        String cbufString = String.format("%s%s", extraChars, txnString);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, prefix.length(), cbufString.length());
-        assertTrue(txnLineString.equalsReplayFileLine(replayFileLine));
+        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, extraChars.length(), cbufString.length());
+        assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
     }
 
     @Test
     public void testParseReplayTxnLineExtraCharsAtEndContent() {
-        String logTimeString = "179a0eb4b129eac0";
-        String cbufString = String.format("%s,\"0\",\"\"\nfoo", logTimeString);
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String extraChars = "foo";
+        String cbufString = String.format("%s%s", txnString, extraChars);
         char[] cbuf = cbufString.toCharArray();
         ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
-        assertEquals(replayFileLine.logTime, Long.decode("0x" + logTimeString).longValue());
-        assertTrue(replayFileLine.sqlStmtIDOrString.equals("0"));
+        assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
     }
     
     @Test
     public void testParseReplayTxnLineZeroStartEndParseOffset() {
-        String cbufString = "179a0eb4af231e40,\"\",\"\"\n";
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
         ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1);
@@ -150,25 +153,31 @@ public class TestFastReplayFileReader {
     
     @Test
     public void testParseReplayTxnLineNonZeroStartEndParseOffset() {
-        String cbufString = "hello there\n179a0eb4af231e40,\"\",\"\"\n";
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String extraChars = "hello there";
+        String cbufString = String.format("%s%s", extraChars, txnString);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 12, cbufString.length());
+        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, extraChars.length(), cbufString.length());
         assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1);
     }
     
     @Test
     public void testParseReplayTxnLineExtraCharsAtEndEndParseOffset() {
-        String extraString = "bar\n";
-        String cbufString = String.format("179a0eb4af231e40,\"\",\"\"\n%s", extraString);
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String extraChars = "goodbye now";
+        String cbufString = String.format("%s%s", txnString, extraChars);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 12, cbufString.length());
-        assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1 - extraString.length());
-        assertEquals(cbuf[replayFileLine.endParseOffset], '\n');
+        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
+        assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1 - extraChars.length());
     }
 
     @Test
     public void testParseReplayTxnLineAlmostCompleteJustMissingNewline() {
-        String cbufString = "179a0eb4aef55780,\"12\",\"\"";
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(false);
+        String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
         ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertEquals(replayFileLine, null);
@@ -176,7 +185,9 @@ public class TestFastReplayFileReader {
 
     @Test
     public void testParseReplayTxnLineStartEqualToSize() {
-        String cbufString = "179a0eb4aef55780,\"12\",\"\"\n";
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
         ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, cbufString.length(), cbufString.length());
         assertEquals(replayFileLine, null);
@@ -184,7 +195,9 @@ public class TestFastReplayFileReader {
 
     @Test
     public void testParseReplayTxnLineStartPastSize() {
-        String cbufString = "179a0eb4aef55780,\"12\",\"\"\n";
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
+        String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
         ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, cbufString.length() + 5, cbufString.length());
         assertEquals(replayFileLine, null);
@@ -203,16 +216,15 @@ public class TestFastReplayFileReader {
      */
     @Test
     public void testReadLineOneCompleteTxnLine() throws IOException {
-        String logTimeString = "179a0eb4af231e40";
-        String txnString = String.format("%s,\"15\",\"\"\n", logTimeString);
+        TxnStringObj txnStringObj = TxnStringObj.generate();
+        String txnString = txnStringObj.toString(true);
         String[] returnStrings = {txnString};
         MockReader mockReader = new MockReader(returnStrings);
         FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnString.length());
 
         // check content of first line
         ReplayFileLine replayFileLine = replayFileReader.readLine();
-        assertEquals(replayFileLine.logTime, Long.decode("0x" + logTimeString).longValue());
-        assertTrue(replayFileLine.sqlStmtIDOrString.equals("15"));
+        assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
 
         // next line should be null
         replayFileLine = replayFileReader.readLine();
@@ -226,21 +238,20 @@ public class TestFastReplayFileReader {
      */
     @Test
     public void testReadLineTwoCompleteTxnLinesInDifferentBlocks() throws IOException {
-        String[] logTimeStrings = {"179a1ad83806a040", "179a1ad83815e280"};
-        String[] txnStrings = {String.format("%s,\"4\",\"\"\n", logTimeStrings[0]), String.format("%s,\"8\",\"\"\n", logTimeStrings[1])};
+        int sqlStmtIDLength = 2; // must use this to ensure they're equal in length
+        TxnStringObj[] txnStringObjs = {TxnStringObj.generate(sqlStmtIDLength), TxnStringObj.generate(sqlStmtIDLength)};
+        String[] txnStrings = {txnStringObjs[0].toString(true), txnStringObjs[1].toString(true)};
         assertEquals(txnStrings[0].length(), txnStrings[1].length());
         MockReader mockReader = new MockReader(txnStrings);
         FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnStrings[0].length());
 
         // check content of first line
         ReplayFileLine replayFileLine = replayFileReader.readLine();
-        assertEquals(replayFileLine.logTime, Long.decode("0x" + logTimeStrings[0]).longValue());
-        assertTrue(replayFileLine.sqlStmtIDOrString.equals("4"));
+        assertTrue(txnStringObjs[0].equalsReplayFileLine(replayFileLine));
 
         // check content of second line
         replayFileLine = replayFileReader.readLine();
-        assertEquals(replayFileLine.logTime, Long.decode("0x" + logTimeStrings[1]).longValue());
-        assertTrue(replayFileLine.sqlStmtIDOrString.equals("8"));
+        assertTrue(txnStringObjs[1].equalsReplayFileLine(replayFileLine));
 
         // next line should be null
         replayFileLine = replayFileReader.readLine();
@@ -254,23 +265,22 @@ public class TestFastReplayFileReader {
      */
     @Test
     public void testReadLineWithTxnLineSpanningTwoBlocks() throws IOException {
-        String[] logTimeStrings = {"179a0eb47a631700", "179a0eb483cdfa80"};
-        String[] txnStrings = {String.format("%s,\"12\",\"\"\n", logTimeStrings[0]), String.format("%s,\"24\",\"\"\n", logTimeStrings[1])};
+        int sqlStmtIDLength = 2; // must use this to ensure they're equal in length
+        TxnStringObj[] txnStringObjs = {TxnStringObj.generate(sqlStmtIDLength), TxnStringObj.generate(sqlStmtIDLength)};
+        String[] txnStrings = {txnStringObjs[0].toString(true), txnStringObjs[1].toString(true)};
         assertEquals(txnStrings[0].length(), txnStrings[1].length());
-        int numExtraChars = 3;
-        String[] returnStrings = {txnStrings[0] + txnStrings[1].substring(0, numExtraChars), txnStrings[1].substring(numExtraChars)};
+        int numShiftChars = 3;
+        String[] returnStrings = {txnStrings[0] + txnStrings[1].substring(0, numShiftChars), txnStrings[1].substring(numShiftChars)};
         MockReader mockReader = new MockReader(returnStrings);
-        FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnStrings[0].length() + numExtraChars);
+        FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnStrings[0].length() + numShiftChars);
 
         // check content of first line
         ReplayFileLine replayFileLine = replayFileReader.readLine();
-        assertEquals(replayFileLine.logTime, Long.decode("0x" + logTimeStrings[0]).longValue());
-        assertTrue(replayFileLine.sqlStmtIDOrString.equals("12"));
+        assertTrue(txnStringObjs[0].equalsReplayFileLine(replayFileLine));
 
         // check content of second line
         replayFileLine = replayFileReader.readLine();
-        assertEquals(replayFileLine.logTime, Long.decode("0x" + logTimeStrings[1]).longValue());
-        assertTrue(replayFileLine.sqlStmtIDOrString.equals("24"));
+        assertTrue(txnStringObjs[1].equalsReplayFileLine(replayFileLine));
 
         // next line should be null
         replayFileLine = replayFileReader.readLine();
