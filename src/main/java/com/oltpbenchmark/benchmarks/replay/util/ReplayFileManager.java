@@ -20,27 +20,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.oltpbenchmark.api.SQLStmt;
+import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
 
 /**
- * @brief ReplayFileManager orchestrates log-to-replay conversion and replay file parsing
+ * @brief ReplayFileManager orchestrates log-to-replay conversion, reading the replay file, and building the in-memory txn queue
  * @author phw2
  */
 public class ReplayFileManager {
-    // An object representation of a line in the replay file which is fully parsed but not yet processed
-    public static class ReplayFileLine {
-        public long logTime;
-        public String sqlStmtIDOrString;
-        public List<Object> params;
-        public int endParseOffset;
-
-        public ReplayFileLine(long logTime, String sqlStmtIDOrString, List<Object> params, int endParseOffset) {
-            this.logTime = logTime;
-            this.sqlStmtIDOrString = sqlStmtIDOrString;
-            this.params = params;
-            this.endParseOffset = endParseOffset;
-        }
-    }
-
     public static final char REPLAY_FILE_SECTION_DELIM = '#';
 
     private static final Logger LOG = LoggerFactory.getLogger(ReplayFileManager.class);
@@ -176,19 +162,24 @@ public class ReplayFileManager {
         }
     }
 
+    /**
+     * @brief Read the replay file and build the in-memory txn queue
+     * 
+     * "Loading" refers to building the in-memory txn queue. On the other hand, "reading" refers to
+     * simply reading the replay file line-by-line. FastReplayFileReader takes care of reading while
+     * this function takes care of loading.
+     */
     private void loadReplayFile() {
         LOG.info("Loading the replay file " + this.replayFilePath + "...");
         
-        FileInputStream replayInputStream;
         CSVReader replayCSVReader; // PAT DEBUG: here temporarily for SQL statement parsing
         try {
-            replayInputStream = new FileInputStream(this.replayFilePath);
-            replayCSVReader = new CSVReader(new InputStreamReader(replayInputStream));
+            replayCSVReader = new CSVReader(new InputStreamReader(new FileInputStream(this.replayFilePath)));
         } catch (FileNotFoundException e) {
-            throw new RuntimeException("Replay file " + replayFilePath + " does not exist");
+            throw new RuntimeException("Replay file " + this.replayFilePath + " does not exist");
         }
 
-        try (InputStreamReader replayInputStreamReader = new InputStreamReader(replayInputStream)) {
+        try (FastReplayFileReader replayFileReader = new FastReplayFileReader(this.replayFilePath)) {
             this.sqlStmtCache = new HashMap<>();
             this.replayTransactionQueue = new LinkedList<>();
             ReplayTransaction currentActiveTransaction = null;
@@ -285,51 +276,6 @@ public class ReplayFileManager {
         } catch (IOException e) {
             throw new RuntimeException("I/O exception " + e + " when reading replay file");
         }
-    }
-
-    // TODO: test that it parses the last line correctly (even though the last line may not have a '\n')
-    /**
-     * @brief Parses the next ReplayFileLine in cbuf if possible
-     * @param cbuf A char buffer to parse from
-     * @param startOffset The starting offset to parse from
-     * @return The parsed ReplayFileLine, or null if the line wasn't complete
-     */
-    public static ReplayFileLine parseReplayFileLine(char[] cbuf, int startOffset, int cbufSize) {
-        if (startOffset >= cbufSize) {
-            return null;
-        }
-
-        // since a replay line always starts with a long, we know it can never start with the section delim (which will be set
-        // to some char that never appears in a long)
-        if (cbuf[startOffset] == ReplayFileManager.REPLAY_FILE_SECTION_DELIM) {
-            return null;
-        }
-
-        int endOffsetsI = 0;
-        int[] endOffsets = new int[3];
-
-        for (int cbufI = startOffset; cbufI < cbufSize; cbufI++) {
-            if (endOffsetsI < 2 && cbuf[cbufI] == ',') {
-                endOffsets[endOffsetsI] = cbufI;
-                endOffsetsI++;
-            // the final param string may have commas in it, but the first two fields will not
-            } else if (endOffsetsI == 2 && cbuf[cbufI] == '\n') {
-                endOffsets[endOffsetsI] = cbufI;
-                endOffsetsI++;
-            }
-        }
-
-        if (endOffsetsI != 3) {
-            return null;
-        }
-
-        long logTime = FastNumericParser.hexCBufToLong(cbuf, startOffset, endOffsets[0]);
-        assert(cbuf[endOffsets[0] + 1] == '"' && cbuf[endOffsets[1] - 1] == '"');
-        String sqlStmtIDOrString = ReplayFileManager.charBufToString(cbuf, endOffsets[0] + 2, endOffsets[1] - 1);
-        assert(cbuf[endOffsets[1] + 1] == '"' && cbuf[endOffsets[2] - 1] == '"');
-        String detailString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
-        List<Object> params = PostgresLogFileParser.parseParamsFromDetail(detailString);
-        return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2] + 1);
     }
 
     public static String charBufToString(char[] cbuf, int start, int end) {

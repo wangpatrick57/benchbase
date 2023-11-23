@@ -5,7 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.oltpbenchmark.benchmarks.replay.util.ReplayFileManager;
-import com.oltpbenchmark.benchmarks.replay.util.ReplayFileManager.ReplayFileLine;
+import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
 
 public class TestReplayFileManager {
     // TODO: check other fields in *Content tests
