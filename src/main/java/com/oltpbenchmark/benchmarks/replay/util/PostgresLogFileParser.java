@@ -108,11 +108,15 @@ public class PostgresLogFileParser implements LogFileParser {
                         // in the output replay file, replay transactions are ordered by the time they first appear in the log file
                         logTransactionQueue.add(newExplicitLogTransaction);
                     } else if (sqlString.equals(COMMIT_STRING) || sqlString.equals(ROLLBACK_STRING)) {
-                        assert(activeTransactions.containsKey(vxid));
                         LogTransaction explicitLogTransaction = activeTransactions.get(vxid);
-                        explicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
-                        explicitLogTransaction.markComplete();
-                        activeTransactions.remove(vxid);
+                        // if the sqlString is ROLLBACK, it's actually possible for that to be the only statement for that vxid and thus for explicitLogTransaction to be null
+                        // one way this can happen is if a txn deadlocks and thus gets aborted before it is able to execute any statements
+                        if (explicitLogTransaction != null) {
+                            assert sqlString.equals(ROLLBACK_STRING) : "It's only allowable for vxid to not be in activeTransactions if sqlString is ROLLBACK";
+                            explicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
+                            explicitLogTransaction.markComplete();
+                            activeTransactions.remove(vxid);
+                        }
                     } else {
                         Integer sqlStmtID = sqlStringIDs.get(sqlString);
                         if (sqlStmtID == null) {
