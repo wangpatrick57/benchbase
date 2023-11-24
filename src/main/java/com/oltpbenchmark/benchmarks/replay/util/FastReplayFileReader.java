@@ -27,7 +27,7 @@ public class FastReplayFileReader implements AutoCloseable {
         }
     }
 
-    private Reader replayReader;
+    private Reader reader;
     private int cbufMaxSize;
     private char[] cbuf;
     private int cbufSize;
@@ -35,7 +35,7 @@ public class FastReplayFileReader implements AutoCloseable {
     private int newReadOffset = 0;
 
     public FastReplayFileReader(Reader reader, int cbufMaxSize) {
-        this.replayReader = reader;
+        this.reader = reader;
 
         this.cbufMaxSize = cbufMaxSize;
         this.cbuf = new char[this.cbufMaxSize];
@@ -66,12 +66,13 @@ public class FastReplayFileReader implements AutoCloseable {
             System.arraycopy(cbuf, parseLineStartOffset, cbuf, 0, numUnfinishedChars);
 
             // load cbuf
-            int numReadBytes = replayReader.read(cbuf, newReadOffset, this.cbufMaxSize - newReadOffset);
+            int numReadBytes = reader.read(cbuf, newReadOffset, this.cbufMaxSize - newReadOffset);
+            // System.out.printf("Just read %d bytes\n", numReadBytes);
             // TODO: handle numReadBytes == 0
             // this means we've read the entire file
             if (numReadBytes == -1) {
                 // there shouldn't be any unfinished chars here
-                assert(numUnfinishedChars == 0);
+                assert numUnfinishedChars == 0 : "there shouldn't be any unfinished chars";
                 return null;
             }
             assert(newReadOffset >= 0);
@@ -91,7 +92,7 @@ public class FastReplayFileReader implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
-        this.replayReader.close();
+        this.reader.close();
     }
 
     /**

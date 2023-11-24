@@ -1,6 +1,5 @@
 package com.oltpbenchmark.benchmarks.replay.util;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -15,10 +14,7 @@ import com.opencsv.exceptions.CsvValidationException;
 public class PrivateBench {
     public static void run(String replayFilePath) {
         warmup(replayFilePath);
-        inputStreamReaderScanWithStringCopy(replayFilePath, true);
-        inputStreamReaderScan(replayFilePath, true);
-        fastCSVReaderScan(replayFilePath, true);
-        csvReaderScan(replayFilePath, true);
+        fastReplayFileReaderScan(replayFilePath, true);
 
         throw new RuntimeException("private bench done");
     }
@@ -151,6 +147,25 @@ public class PrivateBench {
             long loopOuterStartTime = System.nanoTime();
             int n = 0;
             while ((csvLine = csvReader.readNext()) != null) {}
+            if (doPrint) { System.out.printf("fastCSVReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
+        }
+    }
+
+    private static void fastReplayFileReaderScan(String filePath, boolean doPrint) {
+        FileInputStream inputStream;
+        try {
+            inputStream = new FileInputStream(filePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("File " + filePath + " does not exist");
+        }
+
+        try (FastReplayFileReader csvReader = new FastReplayFileReader(new InputStreamReader(inputStream), 4096)) {
+            ReplayFileLine replayFileLine;
+            long loopOuterStartTime = System.nanoTime();
+            int n = 0;
+            while ((replayFileLine = csvReader.readLine()) != null) {}
             if (doPrint) { System.out.printf("fastCSVReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
         } catch (IOException e) {
             throw new RuntimeException("I/O exception " + e + " when reading log file");

@@ -55,7 +55,7 @@ public class FastCSVReader implements AutoCloseable {
             // this means we've read the entire file
             if (numReadBytes == -1) {
                 // there shouldn't be any unfinished chars here
-                // assert numUnfinishedChars == 0 : "there shouldn't be any unfinished chars";
+                assert numUnfinishedChars == 0 : "there shouldn't be any unfinished chars";
                 return null;
             }
             assert(newReadOffset >= 0);

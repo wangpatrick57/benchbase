@@ -37,6 +37,6 @@ fi
 cd target/benchbase-postgres/benchbase-postgres
 # java -jar -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 benchbase.jar $EXEC_ARGS # debugger
 # java -jar -Djava.util.logging.config.file=/home/phw2/benchbase/src/main/resources/logging.properties benchbase.jar $EXEC_ARGS # logging jdbc
-# java -jar -XX:StartFlightRecording=filename=recording.jfr,duration=1s,name=MyRecording,settings=profile.jfc benchbase.jar $EXEC_ARGS # profiling
-java -jar -ea benchbase.jar $EXEC_ARGS # assertions on
+java -jar -XX:StartFlightRecording=filename=recording.jfr,duration=70s,name=MyRecording,settings=profile.jfc benchbase.jar $EXEC_ARGS # profiling
+# java -jar -ea benchbase.jar $EXEC_ARGS # assertions on
 # java -jar benchbase.jar $EXEC_ARGS
