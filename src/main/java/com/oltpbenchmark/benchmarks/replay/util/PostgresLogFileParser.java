@@ -111,8 +111,8 @@ public class PostgresLogFileParser implements LogFileParser {
                         LogTransaction explicitLogTransaction = activeTransactions.get(vxid);
                         // if the sqlString is ROLLBACK, it's actually possible for that to be the only statement for that vxid and thus for explicitLogTransaction to be null
                         // one way this can happen is if a txn deadlocks and thus gets aborted before it is able to execute any statements
+                        assert sqlString.equals(ROLLBACK_STRING) || explicitLogTransaction != null : "It's only allowable for vxid to not be in activeTransactions if sqlString is ROLLBACK";
                         if (explicitLogTransaction != null) {
-                            assert sqlString.equals(ROLLBACK_STRING) : "It's only allowable for vxid to not be in activeTransactions if sqlString is ROLLBACK";
                             explicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
                             explicitLogTransaction.markComplete();
                             activeTransactions.remove(vxid);

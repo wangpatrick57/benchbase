@@ -92,6 +92,8 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
+            PrivateBench.run(this.replayFilePath);
+
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
                 logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);

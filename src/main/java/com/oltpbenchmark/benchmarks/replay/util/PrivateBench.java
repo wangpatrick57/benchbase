@@ -1,9 +1,25 @@
 package com.oltpbenchmark.benchmarks.replay.util;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Random;
 
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
+
 public class PrivateBench {
-    public static void run() {
+    public static void run(String replayFilePath) {
+        warmup(replayFilePath);
+        inputStreamReaderScan(replayFilePath, true);
+        csvReaderScan(replayFilePath, true);
+
+        throw new RuntimeException("private bench done");
+    }
+
+    private static void numberParsing() {
         Random random = new Random();
 
         // hex longs
@@ -52,7 +68,48 @@ public class PrivateBench {
             Long.parseLong(string);
         }
         System.out.printf("Long.parseLong took %.4fms to parse %d decimal longs\n", (double)(System.nanoTime() - startTime) / 1000000, DEC_LONG_BUF_SIZE / DEC_LONG_MAX_SIZE);
+    }
 
-        throw new RuntimeException("private bench done");
+    private static void warmup(String filePath) {
+        inputStreamReaderScan(filePath, false);
+    }
+
+    private static void inputStreamReaderScan(String filePath, boolean doPrint) {
+        FileInputStream inputStream;
+        try {
+            inputStream = new FileInputStream(filePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("File " + filePath + " does not exist");
+        }
+
+        try (InputStreamReader inputStreamReader = new InputStreamReader(inputStream)) {
+            char[] cbuf = new char[4096];
+            int n;
+            long loopOuterStartTime = System.nanoTime();
+            while ((n = inputStreamReader.read(cbuf, 0, 4096)) == 4096) {}
+            if (doPrint) { System.out.printf("readerScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
+        }
+    }
+
+    private static void csvReaderScan(String filePath, boolean doPrint) {
+        FileInputStream inputStream;
+        try {
+            inputStream = new FileInputStream(filePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("File " + filePath + " does not exist");
+        }
+
+        try (CSVReader csvReader = new CSVReader(new InputStreamReader(inputStream))) {
+            String[] fields;
+            long loopOuterStartTime = System.nanoTime();
+            while ((fields = csvReader.readNext()) != null) {}
+            if (doPrint) { System.out.printf("csvReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
+        } catch (CsvValidationException e) {
+            throw new RuntimeException("Log file not in a valid CSV format");
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
+        }
     }
 }
