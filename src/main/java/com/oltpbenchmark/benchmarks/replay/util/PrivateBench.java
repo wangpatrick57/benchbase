@@ -5,8 +5,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Random;
 
+import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
@@ -15,6 +17,7 @@ public class PrivateBench {
         warmup(replayFilePath);
         inputStreamReaderScanWithStringCopy(replayFilePath, true);
         inputStreamReaderScan(replayFilePath, true);
+        fastCSVReaderScan(replayFilePath, true);
         csvReaderScan(replayFilePath, true);
 
         throw new RuntimeException("private bench done");
@@ -130,6 +133,25 @@ public class PrivateBench {
             if (doPrint) { System.out.printf("csvReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
         } catch (CsvValidationException e) {
             throw new RuntimeException("Log file not in a valid CSV format");
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
+        }
+    }
+
+    private static void fastCSVReaderScan(String filePath, boolean doPrint) {
+        FileInputStream inputStream;
+        try {
+            inputStream = new FileInputStream(filePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("File " + filePath + " does not exist");
+        }
+
+        try (FastCSVReader csvReader = new FastCSVReader(new InputStreamReader(inputStream), 4096)) {
+            List<String> csvLine;
+            long loopOuterStartTime = System.nanoTime();
+            int n = 0;
+            while ((csvLine = csvReader.readNext()) != null) {}
+            if (doPrint) { System.out.printf("fastCSVReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
         } catch (IOException e) {
             throw new RuntimeException("I/O exception " + e + " when reading log file");
         }
