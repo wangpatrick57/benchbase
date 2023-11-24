@@ -13,6 +13,7 @@ import com.opencsv.exceptions.CsvValidationException;
 public class PrivateBench {
     public static void run(String replayFilePath) {
         warmup(replayFilePath);
+        inputStreamReaderScanWithStringCopy(replayFilePath, true);
         inputStreamReaderScan(replayFilePath, true);
         csvReaderScan(replayFilePath, true);
 
@@ -87,7 +88,28 @@ public class PrivateBench {
             int n;
             long loopOuterStartTime = System.nanoTime();
             while ((n = inputStreamReader.read(cbuf, 0, 4096)) == 4096) {}
-            if (doPrint) { System.out.printf("readerScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
+            if (doPrint) { System.out.printf("inputStreamReaderScan(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
+        } catch (IOException e) {
+            throw new RuntimeException("I/O exception " + e + " when reading log file");
+        }
+    }
+
+    private static void inputStreamReaderScanWithStringCopy(String filePath, boolean doPrint) {
+        FileInputStream inputStream;
+        try {
+            inputStream = new FileInputStream(filePath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("File " + filePath + " does not exist");
+        }
+
+        try (InputStreamReader inputStreamReader = new InputStreamReader(inputStream)) {
+            char[] cbuf = new char[4096];
+            int n;
+            long loopOuterStartTime = System.nanoTime();
+            while ((n = inputStreamReader.read(cbuf, 0, 4096)) == 4096) {
+                String s = String.copyValueOf(cbuf, 0, 4096);
+            }
+            if (doPrint) { System.out.printf("inputStreamReaderScanWithStringCopy(filePath=%s): the whole loop took %.4fms\n", filePath, (double)(System.nanoTime() - loopOuterStartTime) / 1000000); }
         } catch (IOException e) {
             throw new RuntimeException("I/O exception " + e + " when reading log file");
         }
