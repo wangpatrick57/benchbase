@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
+
 import java.lang.AutoCloseable;
 
 /**
@@ -73,6 +76,13 @@ public class FastCSVReader implements AutoCloseable {
         }
     }
 
+    public static ReplayFileLine csvLineToReplayFileLine(List<String> csvLine) {
+        long logTime = Long.parseLong(csvLine.get(0), 16);
+        String sqlStmtIDOrString = csvLine.get(1);
+        List<Object> params = PostgresLogFileParser.parseParamsFromDetail(csvLine.get(2));
+        return new ReplayFileLine(logTime, sqlStmtIDOrString, null, 0);
+    }
+
     @Override
     public void close() throws IOException {
         this.reader.close();
@@ -85,15 +95,26 @@ public class FastCSVReader implements AutoCloseable {
 
         List<String> csvLine = new ArrayList<String>();
         int currStringStartI = startOffset;
+        char nextDelimChar = ',';
 
         for (int i = startOffset; i < cbufSize; i++) {
             char c = cbuf[i];
 
-            if (c == ',' || c == '\n') {
-                csvLine.add(String.valueOf(cbuf, currStringStartI, i - currStringStartI));
+            if (c == nextDelimChar) {
+                int offset = currStringStartI;
+                int count = i - currStringStartI;
+
+                if (csvLine.size() > 0) {
+                    offset++;
+                    count -= 2; // subtract both the quotes
+                }
+
+                csvLine.add(String.valueOf(cbuf, offset, count));
                 currStringStartI = i + 1;
 
-                if (c == '\n') {
+                if (csvLine.size() == 2) {
+                    nextDelimChar = '\n';
+                } else if (csvLine.size() == 3) {
                     return csvLine;
                 }
             }
@@ -110,6 +131,7 @@ public class FastCSVReader implements AutoCloseable {
         }
 
         numChars += csvLine.size(); // adds chars for the ',' and '\n's
+        numChars += 4; // add chars for the four missing quotes
         return numChars;
     }
 }

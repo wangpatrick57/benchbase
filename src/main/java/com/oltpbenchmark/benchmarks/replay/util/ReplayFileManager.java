@@ -41,6 +41,7 @@ public class ReplayFileManager {
     private String replayFilePath;
     private Queue<ReplayTransaction> replayTransactionQueue;
     private boolean hasSuccessfullyLoaded;
+    private ReplayTransaction currentActiveTransaction;
     
     private Map<Integer, SQLStmt> sqlStmtCache;
 
@@ -92,7 +93,7 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
-            PrivateBench.run(this.replayFilePath);
+            // PrivateBench.run(this.replayFilePath);
 
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
@@ -125,10 +126,10 @@ public class ReplayFileManager {
         }
         InputStreamReader replayInputStreamReader = new InputStreamReader(replayInputStream);
 
-        try (FastReplayFileReader replayFileReader = new FastReplayFileReader(replayInputStreamReader, ReplayFileManager.CBUF_MAX_SIZE)) {
+        try (FastCSVReader fastCSVReader = new FastCSVReader(replayInputStreamReader, ReplayFileManager.CBUF_MAX_SIZE)) {
             this.sqlStmtCache = new HashMap<>();
             this.replayTransactionQueue = new LinkedList<>();
-            ReplayTransaction currentActiveTransaction = null;
+            this.currentActiveTransaction = null;
             ReplayFileLine replayFileLine;
 
             // Read replay transaction section of file
@@ -136,39 +137,13 @@ public class ReplayFileManager {
             long totalInLoopComputeTime = 0;
             long loopOuterStartTime = System.nanoTime();
             int lastProgressPercent = -1;
-            while ((replayFileLine = replayFileReader.readLine()) != null) {
+            List<String> csvLine;
+            while ((csvLine = fastCSVReader.readNext()) != null) {
                 long loopInnerStartTime = System.nanoTime();
-                if (replayFileLine.sqlStmtIDOrString.equals(BEGIN_STRING)) {
-                    if (currentActiveTransaction != null) {
-                        throw new RuntimeException("Found BEGIN when previous transaction hadn't ended yet");
-                    }
-                    currentActiveTransaction = new ReplayTransaction(replayFileLine.logTime, true);
-                } else if (replayFileLine.sqlStmtIDOrString.equals(COMMIT_STRING) || replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING)) {
-                    if (currentActiveTransaction == null) {
-                        throw new RuntimeException("Found COMMIT or ROLLBACK when there is no active transaction");
-                    }
-                    currentActiveTransaction.setShouldRollback(replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING));
-                    replayTransactionQueue.add(currentActiveTransaction);
-                    currentActiveTransaction = null;
-                } else {
-                    int sqlStmtID = Integer.parseInt(replayFileLine.sqlStmtIDOrString);
-                    if (!sqlStmtCache.containsKey(sqlStmtID)) {
-                        // put a placeholder SQLStmt for now. later, when we read the sqlStmtCache section
-                        // of the replay file, we'll fill in the strings in the sqlStmtCache
-                        sqlStmtCache.put(sqlStmtID, new SQLStmt(""));
-                    }
-                    SQLStmt sqlStmt = sqlStmtCache.get(sqlStmtID);
-
-                    if (currentActiveTransaction != null) {
-                        currentActiveTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
-                    } else {
-                        // if there's isn't a current active transaction, it must be an implicit transaction
-                        ReplayTransaction implicitReplayTransaction = new ReplayTransaction(replayFileLine.logTime, false);
-                        implicitReplayTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
-                        replayTransactionQueue.add(implicitReplayTransaction);
-                    }
-                }
-
+                
+                replayFileLine = FastCSVReader.csvLineToReplayFileLine(csvLine);
+                processReplayFileLine(replayFileLine);
+                
                 long bytesRead = replayInputStream.getChannel().position();
                 lastProgressPercent = ConsoleUtil.printProgressBar(bytesRead, totalBytes, lastProgressPercent);
                 totalInLoopComputeTime += System.nanoTime() - loopInnerStartTime;
@@ -176,6 +151,7 @@ public class ReplayFileManager {
             System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
             System.out.printf("loadReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
             System.out.printf("loadReplayFile: we spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
+            System.out.printf("loadReplayFile: we loaded %d transactions\n", this.replayTransactionQueue.size());
 
             // read SQL statement cache section of file
         //     String[] fields;
@@ -207,6 +183,39 @@ public class ReplayFileManager {
         //     throw new RuntimeException("Replay file not in a valid CSV format");
         } catch (IOException e) {
             throw new RuntimeException("I/O exception " + e + " when reading replay file");
+        }
+    }
+
+    private void processReplayFileLine(ReplayFileLine replayFileLine) {
+        if (replayFileLine.sqlStmtIDOrString.equals(BEGIN_STRING)) {
+            if (this.currentActiveTransaction != null) {
+                throw new RuntimeException("Found BEGIN when previous transaction hadn't ended yet");
+            }
+            this.currentActiveTransaction = new ReplayTransaction(replayFileLine.logTime, true);
+        } else if (replayFileLine.sqlStmtIDOrString.equals(COMMIT_STRING) || replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING)) {
+            if (this.currentActiveTransaction == null) {
+                throw new RuntimeException("Found COMMIT or ROLLBACK when there is no active transaction");
+            }
+            this.currentActiveTransaction.setShouldRollback(replayFileLine.sqlStmtIDOrString.equals(ROLLBACK_STRING));
+            replayTransactionQueue.add(this.currentActiveTransaction);
+            this.currentActiveTransaction = null;
+        } else {
+            int sqlStmtID = Integer.parseInt(replayFileLine.sqlStmtIDOrString);
+            if (!sqlStmtCache.containsKey(sqlStmtID)) {
+                // put a placeholder SQLStmt for now. later, when we read the sqlStmtCache section
+                // of the replay file, we'll fill in the strings in the sqlStmtCache
+                sqlStmtCache.put(sqlStmtID, new SQLStmt(""));
+            }
+            SQLStmt sqlStmt = sqlStmtCache.get(sqlStmtID);
+
+            if (this.currentActiveTransaction != null) {
+                this.currentActiveTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
+            } else {
+                // if there's isn't a current active transaction, it must be an implicit transaction
+                ReplayTransaction implicitReplayTransaction = new ReplayTransaction(replayFileLine.logTime, false);
+                implicitReplayTransaction.addSQLStmtCall(sqlStmt, replayFileLine.params, replayFileLine.logTime);
+                replayTransactionQueue.add(implicitReplayTransaction);
+            }
         }
     }
 
