@@ -92,8 +92,6 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
-            PrivateBench.run();
-
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
                 logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
@@ -133,9 +131,11 @@ public class ReplayFileManager {
 
             // Read replay transaction section of file
             // the outer loop fills cbuf. cbuf may contain the start of a line which was not complete in the last cbuf
+            long totalInLoopComputeTime = 0;
             long loopOuterStartTime = System.nanoTime();
             int lastProgressPercent = -1;
             while ((replayFileLine = replayFileReader.readLine()) != null) {
+                long loopInnerStartTime = System.nanoTime();
                 if (replayFileLine.sqlStmtIDOrString.equals(BEGIN_STRING)) {
                     if (currentActiveTransaction != null) {
                         throw new RuntimeException("Found BEGIN when previous transaction hadn't ended yet");
@@ -169,10 +169,11 @@ public class ReplayFileManager {
 
                 long bytesRead = replayInputStream.getChannel().position();
                 lastProgressPercent = ConsoleUtil.printProgressBar(bytesRead, totalBytes, lastProgressPercent);
+                totalInLoopComputeTime += System.nanoTime() - loopInnerStartTime;
             }
             System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
             System.out.printf("loadReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
-            System.out.printf("loadReplayFile: the whole loop added %d txns\n", replayTransactionQueue.size());
+            System.out.printf("loadReplayFile: we spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
 
             // read SQL statement cache section of file
         //     String[] fields;
