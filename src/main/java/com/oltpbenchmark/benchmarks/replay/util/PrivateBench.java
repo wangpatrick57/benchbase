@@ -12,9 +12,8 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
 public class PrivateBench {
-    public static void run(String replayFilePath) {
-        warmup(replayFilePath);
-        fastReplayFileReaderScan(replayFilePath, true);
+    public static void run(String logFilePath, String replayFilePath) {
+        parameterRules();
 
         throw new RuntimeException("private bench done");
     }

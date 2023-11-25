@@ -80,7 +80,14 @@ public class FastCSVReader implements AutoCloseable {
         long logTime = Long.parseLong(csvLine.get(0), 16);
         String sqlStmtIDOrString = csvLine.get(1);
         List<Object> params = PostgresLogFileParser.parseParamsFromDetail(csvLine.get(2));
-        return new ReplayFileLine(logTime, sqlStmtIDOrString, null, 0);
+        return new ReplayFileLine(logTime, sqlStmtIDOrString, params, 0);
+    }
+
+    public static ReplayFileLine fieldsToReplayFileLine(String[] fields) {
+        long logTime = Long.parseLong(fields[0], 16);
+        String sqlStmtIDOrString = fields[1];
+        List<Object> params = PostgresLogFileParser.parseParamsFromDetail(fields[2]);
+        return new ReplayFileLine(logTime, sqlStmtIDOrString, params, 0);
     }
 
     @Override

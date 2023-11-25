@@ -93,7 +93,7 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
-            // PrivateBench.run(this.replayFilePath);
+            PrivateBench.run(this.logFilePath, this.replayFilePath);
 
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
@@ -126,7 +126,7 @@ public class ReplayFileManager {
         }
         InputStreamReader replayInputStreamReader = new InputStreamReader(replayInputStream);
 
-        try (FastCSVReader fastCSVReader = new FastCSVReader(replayInputStreamReader, ReplayFileManager.CBUF_MAX_SIZE)) {
+        try (CSVReader csvReader = new CSVReader(replayInputStreamReader)) {
             this.sqlStmtCache = new HashMap<>();
             this.replayTransactionQueue = new LinkedList<>();
             this.currentActiveTransaction = null;
@@ -137,11 +137,11 @@ public class ReplayFileManager {
             long totalInLoopComputeTime = 0;
             long loopOuterStartTime = System.nanoTime();
             int lastProgressPercent = -1;
-            List<String> csvLine;
-            while ((csvLine = fastCSVReader.readNext()) != null) {
+            String[] fields;
+            while ((fields = csvReader.readNext()) != null) {
                 long loopInnerStartTime = System.nanoTime();
                 
-                replayFileLine = FastCSVReader.csvLineToReplayFileLine(csvLine);
+                replayFileLine = FastCSVReader.fieldsToReplayFileLine(fields);
                 processReplayFileLine(replayFileLine);
                 
                 long bytesRead = replayInputStream.getChannel().position();
@@ -179,8 +179,8 @@ public class ReplayFileManager {
         //     }
 
         //     hasSuccessfullyLoaded = true;
-        // } catch (CsvValidationException e) {
-        //     throw new RuntimeException("Replay file not in a valid CSV format");
+        } catch (CsvValidationException e) {
+            throw new RuntimeException("Replay file not in a valid CSV format");
         } catch (IOException e) {
             throw new RuntimeException("I/O exception " + e + " when reading replay file");
         }

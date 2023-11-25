@@ -42,6 +42,8 @@ public class PostgresLogFileParser implements LogFileParser {
     private static final String ROLLBACK_STRING = "ROLLBACK";
     private final FastLogDateTimeParser fastDTParser;
 
+    public static long timeInParseParamsFromDetail = 0;
+
     /**
      * @brief Construct a PostgresLogFileParser instance
      * 
@@ -260,6 +262,7 @@ public class PostgresLogFileParser implements LogFileParser {
      * @return A SQL string or an empty list if the detail is not a SQL parameter detail
      */
     public static List<Object> parseParamsFromDetail(String detailString) { // PAT DEBUG: make this private later
+        long startTime = System.nanoTime();
         List<Object> valuesList = new ArrayList<>();
         Pair<String, String> typeAndContent = PostgresLogFileParser.splitTypeAndContent(detailString);
         
@@ -288,6 +291,7 @@ public class PostgresLogFileParser implements LogFileParser {
             }
         }
 
+        timeInParseParamsFromDetail += System.nanoTime() - startTime;
         return valuesList;
     }
 
@@ -299,21 +303,24 @@ public class PostgresLogFileParser implements LogFileParser {
     
         // Check if the string represents an integer
         try {
-            return Integer.parseInt(sqlLogString);
+            int data = Integer.parseInt(sqlLogString);
+            return data;
         } catch (NumberFormatException e) {
             // Not an integer
         }
     
         // Check if the string represents a double
         try {
-            return Double.parseDouble(sqlLogString);
+            double data = Double.parseDouble(sqlLogString);
+            return data;
         } catch (NumberFormatException e) {
             // Not a double
         }
     
         // Check if the string is enclosed in single quotes, indicating a string
         if (sqlLogString.startsWith("'") && sqlLogString.endsWith("'")) {
-            return sqlLogString.substring(1, sqlLogString.length() - 1);
+            String data = sqlLogString.substring(1, sqlLogString.length() - 1);
+            return data;
         }
 
         // Check if the string represents a timestamp
@@ -323,12 +330,14 @@ public class PostgresLogFileParser implements LogFileParser {
             formatterBuilder.appendFraction(ChronoField.MILLI_OF_SECOND, 0, 9, true);
             DateTimeFormatter formatter = formatterBuilder.toFormatter();
             LocalDateTime localDateTime = LocalDateTime.parse(sqlLogString, formatter);
-            return Timestamp.valueOf(localDateTime);
+            Timestamp data = Timestamp.valueOf(localDateTime);
+            return data;
         } catch (DateTimeParseException e) {
             // Not a timestamp
         }
     
         // If all else fails, return the string as-is
+        assert false : String.format("Unable to parse \"%s\"", sqlLogString);
         return sqlLogString;
     }
 
