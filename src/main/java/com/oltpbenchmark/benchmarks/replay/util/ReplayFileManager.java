@@ -100,6 +100,8 @@ public class ReplayFileManager {
                 logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
             }
             loadReplayFile();
+
+            throw new RuntimeException("early exit");
         }
     }
 
@@ -153,6 +155,7 @@ public class ReplayFileManager {
             System.out.printf("loadReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
             System.out.printf("loadReplayFile: we spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
             System.out.printf("loadReplayFile: we loaded %d transactions\n", this.replayTransactionQueue.size());
+            System.out.printf("loadReplayFile: we spent %.4fms in parseParamsFromDetail()\n", (double)PostgresLogFileParser.timeInParseParamsFromDetail / 1000000);
 
             // read SQL statement cache section of file
             while ((fields = csvReader.readNext()) != null) {
