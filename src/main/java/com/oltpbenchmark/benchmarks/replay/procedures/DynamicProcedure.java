@@ -19,11 +19,16 @@ package com.oltpbenchmark.benchmarks.replay.procedures;
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.replay.util.ReplayTransaction;
 
+import java.security.Timestamp;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.SQLType;
+import java.sql.Time;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,9 +81,18 @@ public class DynamicProcedure extends Procedure {
                 }
             }
 
-            SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
-            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, replayTransaction.peekParams().toArray())) {
+            // SQLStmt sqlStmt = replayTransaction.peekSQLStmt(); PAT DEBUG
+            // Object[] params = replayTransaction.peekParams().toArray(); PAT DEBUG
+            SQLStmt sqlStmt = new SQLStmt("INSERT INTO beaker (volume_ml, rating, manufacturer, date_acquired, time_acquired, timestamp_acquired, is_sterile) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt)) {
                 // DynamicProcedure.printPreparedStatement(preparedStatement);
+                preparedStatement.setObject(1, 50);
+                preparedStatement.setObject(2, 1.5);
+                preparedStatement.setObject(3, "manu");
+                preparedStatement.setObject(4, new Date(System.currentTimeMillis()), Types.DATE);
+                preparedStatement.setObject(5, new Time(1234000));
+                preparedStatement.setObject(6, new Date(System.currentTimeMillis()), Types.TIMESTAMP);
+                preparedStatement.setObject(7, false);
                 preparedStatement.execute();
             }
             replayTransaction.removeSQLStmtCall();
