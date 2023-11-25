@@ -46,10 +46,6 @@ public class DynamicProcedure extends Procedure {
 
     // DynamicProcedure needs replaySpeedupLimited and replaySpeedup to know how to replay all SQLStmts in replayTransaction
     public void run(Connection conn, ReplayTransaction replayTransaction, boolean replaySpeedupLimited, double replaySpeedup) throws SQLException {
-        if (DBWorkload.DEBUG) {
-            System.out.printf("Entering DynamicProcedure.run() for %d statements\n", replayTransaction.getSQLStmtCallCount());
-        }
-
         // I chose to replay statements within a transaction relative to when we entered _this function_
         // instead of relative to when the entire replay started. This way, if the ReplayTransaction was
         // delayed in the work queue, we avoid replaying a bunch of SQL statements in close succession

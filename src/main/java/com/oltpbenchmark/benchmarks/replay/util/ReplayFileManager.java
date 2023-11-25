@@ -93,14 +93,13 @@ public class ReplayFileManager {
                 throw new RuntimeException("Both the log file (" + logFilePath + ") and replay file (" + replayFilePath + ") do not exist.");
             }
 
-            PrivateBench.run(this.logFilePath, this.replayFilePath);
+            // PrivateBench.run(this.logFilePath, this.replayFilePath);
 
             if (doConvert) {
                 LogFileParser logFileParser = new PostgresLogFileParser();
                 logFileParser.convertLogFileToReplayFile(this.logFilePath, this.replayFilePath);
             }
             loadReplayFile();
-            throw new RuntimeException("early exit");
         }
     }
 
@@ -117,10 +116,8 @@ public class ReplayFileManager {
         long totalBytes = replayFile.length();
         
         FileInputStream replayInputStream;
-        CSVReader replayCSVReader; // PAT DEBUG: here temporarily for SQL statement parsing
         try {
             replayInputStream = new FileInputStream(this.replayFilePath);
-            replayCSVReader = new CSVReader(new InputStreamReader(new FileInputStream(this.replayFilePath)));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Replay file " + this.replayFilePath + " does not exist");
         }
@@ -141,6 +138,10 @@ public class ReplayFileManager {
             while ((fields = csvReader.readNext()) != null) {
                 long loopInnerStartTime = System.nanoTime();
                 
+                if (fields[0].charAt(0) == ReplayFileManager.REPLAY_FILE_SECTION_DELIM) {
+                    break;
+                }
+                
                 replayFileLine = FastCSVReader.fieldsToReplayFileLine(fields);
                 processReplayFileLine(replayFileLine);
                 
@@ -154,31 +155,30 @@ public class ReplayFileManager {
             System.out.printf("loadReplayFile: we loaded %d transactions\n", this.replayTransactionQueue.size());
 
             // read SQL statement cache section of file
-        //     String[] fields;
-        //     while ((fields = replayCSVReader.readNext()) != null) {
-        //         String sqlStmtIDString = fields[0];
-        //         int sqlStmtID = Integer.parseInt(sqlStmtIDString);
-        //         String sqlString = fields[1];
+            while ((fields = csvReader.readNext()) != null) {
+                String sqlStmtIDString = fields[0];
+                int sqlStmtID = Integer.parseInt(sqlStmtIDString);
+                String sqlString = fields[1];
 
-        //         if (!sqlStmtCache.containsKey(sqlStmtID)) {
-        //             LOG.warn("Read SQL statement of ID " + sqlStmtID + ", except this ID didn't show up in the replay transactions");
-        //         } else {
-        //             SQLStmt sqlStmt = sqlStmtCache.get(sqlStmtID);
-        //             sqlStmt.setSQL(sqlString);
-        //         }
-        //     }
+                if (!sqlStmtCache.containsKey(sqlStmtID)) {
+                    LOG.warn("Read SQL statement of ID " + sqlStmtID + ", except this ID didn't show up in the replay transactions");
+                } else {
+                    SQLStmt sqlStmt = sqlStmtCache.get(sqlStmtID);
+                    sqlStmt.setSQL(sqlString);
+                }
+            }
             
-        //     // perform validations
-        //     for (Map.Entry<Integer, SQLStmt> entry : sqlStmtCache.entrySet()) {
-        //         int sqlStmtID = entry.getKey();
-        //         SQLStmt sqlStmt = entry.getValue();
+            // perform validations
+            for (Map.Entry<Integer, SQLStmt> entry : sqlStmtCache.entrySet()) {
+                int sqlStmtID = entry.getKey();
+                SQLStmt sqlStmt = entry.getValue();
 
-        //         if (sqlStmt.getSQL().equals("")) {
-        //             throw new RuntimeException("sqlStmtID " + sqlStmtID + " showed up in the replay transactions but not in the cache");
-        //         }
-        //     }
+                if (sqlStmt.getSQL().equals("")) {
+                    throw new RuntimeException("sqlStmtID " + sqlStmtID + " showed up in the replay transactions but not in the cache");
+                }
+            }
 
-        //     hasSuccessfullyLoaded = true;
+            hasSuccessfullyLoaded = true;
         } catch (CsvValidationException e) {
             throw new RuntimeException("Replay file not in a valid CSV format");
         } catch (IOException e) {

@@ -41,9 +41,7 @@ public class ReplayWorker extends Worker<ReplayBenchmark> {
     */
     @Override
     protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException, RuntimeException {
-        if (DBWorkload.DEBUG) {
-            System.out.printf("entering ReplayWorker.executeWork\n");
-        }
+        System.out.println("entering ReplayWorker.executeWork");
 
         DynamicProcedure proc;
         try {

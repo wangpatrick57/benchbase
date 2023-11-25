@@ -187,9 +187,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     @Override
     public final void run() {
-        if (DBWorkload.DEBUG) {
-            System.out.printf("entering Worker.run\n");
-        }
         Thread t = Thread.currentThread();
         t.setName(this.toString());
 
@@ -390,10 +387,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @param transactionType TODO
      */
     protected final void doWork(DatabaseType databaseType, TransactionType transactionType, Optional<List<Object>> runArgs) {
-        if (DBWorkload.DEBUG) {
-            System.out.printf("entering Worker.doWork\n");
-        }
-
         try {
             int retryCount = 0;
             int maxRetryCount = configuration.getMaxRetries();

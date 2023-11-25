@@ -161,9 +161,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
         // Main Loop
         while (true) {
-            if (DBWorkload.DEBUG) {
-                System.out.printf("entering ThreadBench's while loop at time %d\n", System.nanoTime());
-            }
             // posting new work... and resetting the queue in case we have new
             // portion of the workload...
 

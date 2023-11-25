@@ -13,8 +13,6 @@ import com.opencsv.exceptions.CsvValidationException;
 
 public class PrivateBench {
     public static void run(String logFilePath, String replayFilePath) {
-        parameterRules();
-
         throw new RuntimeException("private bench done");
     }
 

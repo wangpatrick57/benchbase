@@ -59,9 +59,6 @@ private Phase currentPhase = null;
      * Add a request to do work.
      */
     public void addToQueue(int amount, boolean resetQueues) {
-        if (DBWorkload.DEBUG) {
-            System.out.printf("entering WorkloadState.addToQueue at time %d\n", System.nanoTime());
-        }
         int workAdded = 0;
         
         synchronized (this) {
@@ -114,9 +111,6 @@ private Phase currentPhase = null;
      * Called by ThreadPoolThreads when waiting for work.
      */
     public SubmittedProcedure fetchWork() {
-        if (DBWorkload.DEBUG) {
-            System.out.printf("entering WorkloadState.fetchWork\n");
-        }
         synchronized (this) {
             if (currentPhase != null && currentPhase.isSerial()) {
                 ++workersWaiting;
