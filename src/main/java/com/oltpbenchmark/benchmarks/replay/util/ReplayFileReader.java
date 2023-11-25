@@ -3,6 +3,8 @@ package com.oltpbenchmark.benchmarks.replay.util;
 import java.io.IOException;
 import java.io.Reader;
 import java.lang.AutoCloseable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.hsqldb.types.Types;
@@ -174,6 +176,47 @@ public class ReplayFileReader implements AutoCloseable {
         return Types.NULL;
     }
 
+    private static String convertParamToString(Object param, char typeChar) {
+        switch (typeChar) {
+        case 'i':
+        case 'd':
+        case 'v':
+        case 'b':
+            return param.toString();
+        case 'D':
+            return Long.toString(((java.sql.Date)param).getTime());
+        case 't':
+            return Long.toString(((java.sql.Time)param).getTime());
+        case 'T':
+            return Long.toString(((java.sql.Timestamp)param).getTime());
+        default:
+            assert false : String.format("Unknown typeChar (%c)", typeChar);
+            return null;
+        }
+    }
+
+    private static Object parseParamFromString(String paramString, char typeChar) {
+        switch (typeChar) {
+        case 'i':
+            return Long.parseLong(paramString);
+        case 'd':
+            return Double.parseDouble(paramString);
+        case 'v':
+            return paramString;
+        case 'b':
+            return Boolean.parseBoolean(paramString);
+        case 'D':
+            return new java.sql.Date(Long.parseLong(paramString));
+        case 't':
+            return new java.sql.Time(Long.parseLong(paramString));
+        case 'T':
+            return new java.sql.Timestamp(Long.parseLong(paramString));
+        default:
+            assert false : String.format("Unknown typeChar (%c)", typeChar);
+            return null;
+        }
+    }
+
     public static String convertParamsToString(Object[] params) {
         StringBuilder sb = new StringBuilder();
 
@@ -182,7 +225,7 @@ public class ReplayFileReader implements AutoCloseable {
             char typeChar = SQL_TYPE_CHARS.get(type);
             sb.append(typeChar);
             sb.append('\'');
-            sb.append(param.toString());
+            sb.append(convertParamToString(param, typeChar));
             sb.append('\'');
         }
 
@@ -190,6 +233,35 @@ public class ReplayFileReader implements AutoCloseable {
     }
 
     public static Object[] parseParamsFromString(String paramsString) {
-        return new Object[]{5, 1.5};
+        List<Object> params = new ArrayList<>();
+        Character currTypeChar = null; // null is used to indicate errors
+        StringBuilder currParamSB = new StringBuilder();
+        boolean isInSingleQuotes = false;
+
+        for (int i = 0; i < paramsString.length(); i++) {
+            char c = paramsString.charAt(i);
+
+            if (isInSingleQuotes) {
+                if (c == '\'') {
+                    String currParamString = currParamSB.toString();
+                    assert currTypeChar != null : String.format("no type char for currParamString(%s)", currParamString);
+                    params.add(ReplayFileReader.parseParamFromString(currParamString, currTypeChar));
+                    currTypeChar = null;
+                    currParamSB = new StringBuilder();
+                    isInSingleQuotes = false;
+                } else {
+                    currParamSB.append(c);
+                }
+            } else {
+                if (c == '\'') {
+                    isInSingleQuotes = true;
+                } else {
+                    assert currTypeChar == null : "more than one char in between single quotes";
+                    currTypeChar = c;
+                }
+            }
+        }
+
+        return params.toArray();
     }
 }
