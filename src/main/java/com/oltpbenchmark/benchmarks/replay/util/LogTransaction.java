@@ -3,10 +3,13 @@ package com.oltpbenchmark.benchmarks.replay.util;
 import java.util.LinkedList;
 import java.util.List;
 
-// TODO: make this a class inside LogFileParser
-
-// A LogTransaction represents a single transaction to write to the replay file
-// These transactions are created by reading from the log file
+/**
+ * @brief A LogTransaction represents a single transaction to write to the replay file
+ * 
+ * These transactions are created by reading from the log file
+ * 
+ * @author phw2
+ */
 public class LogTransaction {
     // A SQLStmtLine represents a single SQL statement line to write to the replay file
     private static class SQLStmtLine {
@@ -37,7 +40,7 @@ public class LogTransaction {
         }
 
         public String toString() {
-            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.params.toString());
+            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, ReplayFileReader.convertParamsToString(this.params));
         }
     }
 

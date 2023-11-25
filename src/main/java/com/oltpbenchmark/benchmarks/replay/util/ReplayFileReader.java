@@ -2,10 +2,10 @@ package com.oltpbenchmark.benchmarks.replay.util;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.ArrayList;
-import java.util.List;
 import java.lang.AutoCloseable;
-import java.sql.Types;
+import java.util.Map;
+
+import org.hsqldb.types.Types;
 
 /**
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
@@ -35,6 +35,15 @@ public class ReplayFileReader implements AutoCloseable {
     private int cbufSize;
     private int parseLineStartOffset;
     private int newReadOffset = 0;
+    private static final Map<Integer, Character> SQL_TYPE_CHARS = Map.of(
+        Types.BIGINT, 'i',
+        Types.DECIMAL, 'd',
+        Types.VARCHAR, 'v',
+        Types.BOOLEAN, 'b',
+        Types.DATE, 'D',
+        Types.TIME, 't',
+        Types.TIMESTAMP, 'T'
+    );
 
     public ReplayFileReader(Reader reader, int cbufMaxSize) {
         this.reader = reader;
@@ -140,6 +149,44 @@ public class ReplayFileReader implements AutoCloseable {
         String paramsString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
         Object[] params = ReplayFileReader.parseParamsFromString(paramsString);
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2]);
+    }
+
+    public static int javaTypeToSQLType(Object obj) {
+        Class<? extends Object> cls = obj.getClass();
+
+        if (cls == Long.class) {
+            return Types.BIGINT;
+        } else if (cls == Double.class) {
+            return Types.DECIMAL;
+        } else if (cls == String.class) {
+            return Types.VARCHAR;
+        } else if (cls == Boolean.class) {
+            return Types.BOOLEAN;
+        } else if (cls == java.sql.Date.class) {
+            return Types.DATE;
+        } else if (cls == java.sql.Time.class) {
+            return Types.TIME;
+        } else if (cls == java.sql.Timestamp.class) {
+            return Types.TIMESTAMP;
+        }
+
+        assert false : String.format("javaTypeToSQLType: obj is of unknown type %s", cls.toString());
+        return Types.NULL;
+    }
+
+    public static String convertParamsToString(Object[] params) {
+        StringBuilder sb = new StringBuilder();
+
+        for (Object param : params) {
+            int type = javaTypeToSQLType(param);
+            char typeChar = SQL_TYPE_CHARS.get(type);
+            sb.append(typeChar);
+            sb.append('\'');
+            sb.append(param.toString());
+            sb.append('\'');
+        }
+
+        return sb.toString();
     }
 
     public static Object[] parseParamsFromString(String paramsString) {

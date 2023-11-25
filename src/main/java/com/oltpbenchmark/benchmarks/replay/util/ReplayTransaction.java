@@ -7,12 +7,12 @@ import java.util.Queue;
 
 import com.oltpbenchmark.api.SQLStmt;
 
-// TODO: make this a class inside ReplayFileManager
-
 /**
  * @brief A ReplayTransaction represents a single transaction to replay
  * 
  * These transactions are created by reading from the replay file
+ * 
+ * @author phw2
  */
 public class ReplayTransaction {
     private static class SQLStmtCall {

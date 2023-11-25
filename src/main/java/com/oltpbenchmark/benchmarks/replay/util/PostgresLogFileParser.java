@@ -294,7 +294,7 @@ public class PostgresLogFileParser implements LogFileParser {
         }
 
         timeInParseParamsFromDetail += System.nanoTime() - startTime;
-        return new Object[1];
+        return valuesList.toArray();
     }
 
     private static Object parseSQLLogStringToObject(String sqlLogString) {
@@ -305,7 +305,8 @@ public class PostgresLogFileParser implements LogFileParser {
     
         // Check if the string represents an integer
         try {
-            int data = Integer.parseInt(sqlLogString);
+            // always parse it as a long so that it'll handle numbers of any size
+            long data = Long.parseLong(sqlLogString);
             return data;
         } catch (NumberFormatException e) {
             // Not an integer
