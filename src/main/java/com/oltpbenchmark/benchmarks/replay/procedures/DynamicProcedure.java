@@ -98,6 +98,16 @@ public class DynamicProcedure extends Procedure {
                 preparedStatement.execute();
             }
 
+            // nulls
+            sqlStmt = new SQLStmt("INSERT INTO beaker (make_me_null1, make_me_null2, make_me_null3) VALUES (?, ?, ?)");
+            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt)) {
+                // DynamicProcedure.printPreparedStatement(preparedStatement);
+                preparedStatement.setObject(1, null);
+                preparedStatement.setObject(2, null);
+                preparedStatement.setObject(3, null);
+                preparedStatement.execute();
+            }
+
             // type variants
             sqlStmt = new SQLStmt("INSERT INTO beaker (a_smallint, a_bigint, a_char, a_numeric, a_float, a_real) VALUES (?, ?, ?, ?, ?, ?)");
             try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt)) {
