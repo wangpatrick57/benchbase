@@ -2,8 +2,10 @@ package com.oltpbenchmark.benchmarks.replay.util;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
 import java.lang.AutoCloseable;
+import java.sql.Types;
 
 /**
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
@@ -16,10 +18,10 @@ public class ReplayFileReader implements AutoCloseable {
     public static class ReplayFileLine {
         public long logTime;
         public String sqlStmtIDOrString;
-        public List<Object> params;
+        public Object[] params;
         public int endParseOffset;
 
-        public ReplayFileLine(long logTime, String sqlStmtIDOrString, List<Object> params, int endParseOffset) {
+        public ReplayFileLine(long logTime, String sqlStmtIDOrString, Object[] params, int endParseOffset) {
             this.logTime = logTime;
             this.sqlStmtIDOrString = sqlStmtIDOrString;
             this.params = params;
@@ -135,8 +137,12 @@ public class ReplayFileReader implements AutoCloseable {
         assert(cbuf[endOffsets[0] + 1] == '"' && cbuf[endOffsets[1] - 1] == '"');
         String sqlStmtIDOrString = ReplayFileManager.charBufToString(cbuf, endOffsets[0] + 2, endOffsets[1] - 1);
         assert(cbuf[endOffsets[1] + 1] == '"' && cbuf[endOffsets[2] - 1] == '"');
-        String detailString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
-        List<Object> params = PostgresLogFileParser.parseParamsFromDetail(detailString);
+        String paramsString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
+        Object[] params = ReplayFileReader.parseParamsFromString(paramsString);
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2]);
+    }
+
+    public static Object[] parseParamsFromString(String paramsString) {
+        return new Object[]{5, 1.5};
     }
 }

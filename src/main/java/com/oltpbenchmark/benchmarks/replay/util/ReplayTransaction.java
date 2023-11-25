@@ -7,12 +7,17 @@ import java.util.Queue;
 
 import com.oltpbenchmark.api.SQLStmt;
 
-// A ReplayTransaction represents a single transaction to replay
-// These transactions are created by reading from the replay file
+// TODO: make this a class inside ReplayFileManager
+
+/**
+ * @brief A ReplayTransaction represents a single transaction to replay
+ * 
+ * These transactions are created by reading from the replay file
+ */
 public class ReplayTransaction {
     private static class SQLStmtCall {
         private SQLStmt sqlStmt;
-        private List<Object> params;
+        private Object[] params;
         private long callTime;
 
         /**
@@ -22,7 +27,7 @@ public class ReplayTransaction {
          *               is not parameterized
          * @param callTime The timestamp, in nanoseconds, of this statement's line in the log file
          */
-        private SQLStmtCall(SQLStmt sqlStmt, List<Object> params, long callTime) {
+        private SQLStmtCall(SQLStmt sqlStmt, Object[] params, long callTime) {
             this.sqlStmt = sqlStmt;
             this.params = params;
             this.callTime = callTime;
@@ -58,7 +63,7 @@ public class ReplayTransaction {
         this.shouldRollback = Optional.of(shouldRollback);
     }
 
-    public void addSQLStmtCall(SQLStmt sqlStmt, List<Object> params, long callTime) {
+    public void addSQLStmtCall(SQLStmt sqlStmt, Object[] params, long callTime) {
         this.sqlStmtCalls.add(new SQLStmtCall(sqlStmt, params, callTime));
     }
 
@@ -80,7 +85,7 @@ public class ReplayTransaction {
     /**
      * @pre The queue is not empty
      */
-    public List<Object> peekParams() {
+    public Object[] peekParams() {
         return this.sqlStmtCalls.peek().params;
     }
 

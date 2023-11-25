@@ -3,39 +3,41 @@ package com.oltpbenchmark.benchmarks.replay.util;
 import java.util.LinkedList;
 import java.util.List;
 
+// TODO: make this a class inside LogFileParser
+
 // A LogTransaction represents a single transaction to write to the replay file
 // These transactions are created by reading from the log file
 public class LogTransaction {
     // A SQLStmtLine represents a single SQL statement line to write to the replay file
     private static class SQLStmtLine {
         private String sqlStmtOutputString;
-        private String detailString;
+        private Object[] params;
         private long callTime;
 
         /**
          * @param sqlStmtID The ID of the SQL statement of this line
-         * @param params    The string of parameters of this SQL line in the log file
+         * @param params    The parameters of this SQL line in the log file
          * @param callTime  The timestamp, in nanoseconds, of this statement's line in the log file
          */
-        private SQLStmtLine(int sqlStmtID, String detailString, long callTime) {
+        private SQLStmtLine(int sqlStmtID, Object[] params, long callTime) {
             this.sqlStmtOutputString = Integer.toString(sqlStmtID);
-            this.detailString = detailString;
+            this.params = params;
             this.callTime = callTime;
         }
 
         /**
          * @param sqlStmtString The String of the SQL statement of this line
-         * @param params        The string of parameters of this SQL line in the log file
+         * @param params        The parameters of this SQL line in the log file
          * @param callTime      The timestamp, in nanoseconds, of this statement's line in the log file
          */
-        private SQLStmtLine(String sqlStmtString, String detailString, long callTime) {
+        private SQLStmtLine(String sqlStmtString, Object[] params, long callTime) {
             this.sqlStmtOutputString = sqlStmtString;
-            this.detailString = detailString;
+            this.params = params;
             this.callTime = callTime;
         }
 
-        private String getFormattedString() {
-            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.detailString);
+        public String toString() {
+            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.params.toString());
         }
     }
 
@@ -61,22 +63,22 @@ public class LogTransaction {
         return isComplete;
     }
 
-    public void addSQLStmtLine(int sqlStmtID, String detailString, long callTime) {
-        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtID, detailString, callTime));
+    public void addSQLStmtLine(int sqlStmtID, Object[] params, long callTime) {
+        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtID, params, callTime));
     }
 
-    public void addSQLStmtLine(String sqlStmtString, String detailString, long callTime) {
-        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtString, detailString, callTime));
+    public void addSQLStmtLine(String sqlStmtString, Object[] params, long callTime) {
+        this.sqlStmtLines.add(new SQLStmtLine(sqlStmtString, params, callTime));
     }
 
-    public String getFormattedString() {
+    public String toString() {
         if (!this.isComplete) {
-            throw new RuntimeException("getFormattedString should only be called if the transaction is complete");
+            throw new RuntimeException("toString should only be called if the transaction is complete");
         }
 
         StringBuilder sb = new StringBuilder();
         for (SQLStmtLine sqlStmtLine : this.sqlStmtLines) {
-            sb.append(sqlStmtLine.getFormattedString() + "\n");
+            sb.append(sqlStmtLine.toString() + "\n");
         }
 
         return sb.toString();

@@ -99,13 +99,14 @@ public class PostgresLogFileParser implements LogFileParser {
                         continue;
                     }
                     String detailString = fields[PGLOG_DETAIL_INDEX];
+                    Object[] params = PostgresLogFileParser.parseParamsFromDetail(detailString);
                     String vxid = fields[PGLOG_VXID_INDEX];
 
                     // manage activeTransactions and logTransactionQueue based on what the line is
                     if (sqlString.equals(BEGIN_STRING)) {
                         assert(!activeTransactions.containsKey(vxid));
                         LogTransaction newExplicitLogTransaction = new LogTransaction(true);
-                        newExplicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
+                        newExplicitLogTransaction.addSQLStmtLine(sqlString, params, logTime);
                         activeTransactions.put(vxid, newExplicitLogTransaction);
                         // in the output replay file, replay transactions are ordered by the time they first appear in the log file
                         logTransactionQueue.add(newExplicitLogTransaction);
@@ -115,7 +116,7 @@ public class PostgresLogFileParser implements LogFileParser {
                         // one way this can happen is if a txn deadlocks and thus gets aborted before it is able to execute any statements
                         assert sqlString.equals(ROLLBACK_STRING) || explicitLogTransaction != null : "It's only allowable for vxid to not be in activeTransactions if sqlString is ROLLBACK";
                         if (explicitLogTransaction != null) {
-                            explicitLogTransaction.addSQLStmtLine(sqlString, detailString, logTime);
+                            explicitLogTransaction.addSQLStmtLine(sqlString, params, logTime);
                             explicitLogTransaction.markComplete();
                             activeTransactions.remove(vxid);
                         }
@@ -129,11 +130,11 @@ public class PostgresLogFileParser implements LogFileParser {
                         if (activeTransactions.containsKey(vxid)) {
                             // if it's in active transactions, it should be added to the corresponding explicit transaction
                             LogTransaction explicitLogTransaction = activeTransactions.get(vxid);
-                            explicitLogTransaction.addSQLStmtLine(sqlStmtID, detailString, logTime);
+                            explicitLogTransaction.addSQLStmtLine(sqlStmtID, params, logTime);
                         } else {
                             // if it's not in active transactions, it must be an implicit transaction
                             LogTransaction implicitLogTransaction = new LogTransaction(false);
-                            implicitLogTransaction.addSQLStmtLine(sqlStmtID, detailString, logTime);
+                            implicitLogTransaction.addSQLStmtLine(sqlStmtID, params, logTime);
                             logTransactionQueue.add(implicitLogTransaction);
                         }
                     }
@@ -152,7 +153,7 @@ public class PostgresLogFileParser implements LogFileParser {
                 while (!logTransactionQueue.isEmpty()) {
                     LogTransaction logTransaction = logTransactionQueue.peek();
                     if (logTransaction.getIsComplete()) {
-                        replayFileWriter.write(logTransaction.getFormattedString());
+                        replayFileWriter.write(logTransaction.toString());
                     } else {
                         numUncompletedTransactions++;
                     }
@@ -259,9 +260,9 @@ public class PostgresLogFileParser implements LogFileParser {
      * We return an empty list so that it can be passed into Procedure.getPreparedStatement() safely
      * 
      * @param detailString The string in the "detail" field of the log file
-     * @return A SQL string or an empty list if the detail is not a SQL parameter detail
+     * @return An Object[] or null if the detail is not a SQL parameter detail
      */
-    public static List<Object> parseParamsFromDetail(String detailString) { // PAT DEBUG: make this private later
+    public static Object[] parseParamsFromDetail(String detailString) { // PAT DEBUG: make this private later
         long startTime = System.nanoTime();
         List<Object> valuesList = new ArrayList<>();
         Pair<String, String> typeAndContent = PostgresLogFileParser.splitTypeAndContent(detailString);
@@ -293,7 +294,7 @@ public class PostgresLogFileParser implements LogFileParser {
         }
 
         timeInParseParamsFromDetail += System.nanoTime() - startTime;
-        return valuesList;
+        return new Object[1];
     }
 
     private static Object parseSQLLogStringToObject(String sqlLogString) {
