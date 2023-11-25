@@ -80,44 +80,13 @@ public class DynamicProcedure extends Procedure {
                 }
             }
 
-            // SQLStmt sqlStmt = replayTransaction.peekSQLStmt(); PAT DEBUG
-            replayTransaction.removeSQLStmtCall(); // remove right after peeking, even if the prepared statement is eventually not successful
-            // Object[] params = replayTransaction.peekParams().toArray(); PAT DEBUG
+            SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
+            Object[] params = replayTransaction.peekParams().toArray();
+            // remove after peeking, even if the prepared statement is eventually not successful
+            replayTransaction.removeSQLStmtCall();
 
-            // basic types
-            SQLStmt sqlStmt = new SQLStmt("INSERT INTO beaker (volume_ml, rating, manufacturer, date_acquired, time_acquired, timestamp_acquired, is_sterile) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt)) {
+            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt, params)) {
                 // DynamicProcedure.printPreparedStatement(preparedStatement);
-                preparedStatement.setObject(1, 50);
-                preparedStatement.setObject(2, 1.5);
-                preparedStatement.setObject(3, "manu");
-                preparedStatement.setObject(4, new Date(System.currentTimeMillis()));
-                preparedStatement.setObject(5, new Time(1234000));
-                preparedStatement.setObject(6, new Timestamp(System.currentTimeMillis()));
-                preparedStatement.setObject(7, false);
-                preparedStatement.execute();
-            }
-
-            // nulls
-            sqlStmt = new SQLStmt("INSERT INTO beaker (make_me_null1, make_me_null2, make_me_null3) VALUES (?, ?, ?)");
-            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt)) {
-                // DynamicProcedure.printPreparedStatement(preparedStatement);
-                preparedStatement.setObject(1, null);
-                preparedStatement.setObject(2, null);
-                preparedStatement.setObject(3, null);
-                preparedStatement.execute();
-            }
-
-            // type variants
-            sqlStmt = new SQLStmt("INSERT INTO beaker (a_smallint, a_bigint, a_char, a_numeric, a_float, a_real) VALUES (?, ?, ?, ?, ?, ?)");
-            try (PreparedStatement preparedStatement = this.getPreparedStatement(conn, sqlStmt)) {
-                // DynamicProcedure.printPreparedStatement(preparedStatement);
-                preparedStatement.setObject(1, (long)12);
-                preparedStatement.setObject(2, (long)250);
-                preparedStatement.setObject(3, "hello");
-                preparedStatement.setObject(4, (double)5.5);
-                preparedStatement.setObject(5, (double)5.8);
-                preparedStatement.setObject(6, (double)3.8);
                 preparedStatement.execute();
             }
         }

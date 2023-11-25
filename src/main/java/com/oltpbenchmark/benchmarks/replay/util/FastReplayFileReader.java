@@ -131,7 +131,7 @@ public class FastReplayFileReader implements AutoCloseable {
             return null;
         }
 
-        long logTime = FastNumericParser.hexCBufToLong(cbuf, startOffset, endOffsets[0]);
+        long logTime = Long.parseLong(String.valueOf(cbuf, startOffset, endOffsets[0] - startOffset));
         assert(cbuf[endOffsets[0] + 1] == '"' && cbuf[endOffsets[1] - 1] == '"');
         String sqlStmtIDOrString = ReplayFileManager.charBufToString(cbuf, endOffsets[0] + 2, endOffsets[1] - 1);
         assert(cbuf[endOffsets[1] + 1] == '"' && cbuf[endOffsets[2] - 1] == '"');

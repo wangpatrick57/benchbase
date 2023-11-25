@@ -278,6 +278,7 @@ public class PostgresLogFileParser implements LogFileParser {
                     if (isInQuotes) {
                         if (c == '\'') {
                             valuesList.add(PostgresLogFileParser.parseSQLLogStringToObject(currentParamStr.toString()));
+                            currentParamStr = new StringBuilder(); // reset builder
                             isInQuotes = false;
                         } else {
                             currentParamStr.append(c);
@@ -316,12 +317,6 @@ public class PostgresLogFileParser implements LogFileParser {
         } catch (NumberFormatException e) {
             // Not a double
         }
-    
-        // Check if the string is enclosed in single quotes, indicating a string
-        if (sqlLogString.startsWith("'") && sqlLogString.endsWith("'")) {
-            String data = sqlLogString.substring(1, sqlLogString.length() - 1);
-            return data;
-        }
 
         // Check if the string represents a timestamp
         try {
@@ -336,8 +331,7 @@ public class PostgresLogFileParser implements LogFileParser {
             // Not a timestamp
         }
     
-        // If all else fails, return the string as-is
-        assert false : String.format("Unable to parse \"%s\"", sqlLogString);
+        // If all else fails, assume it's a string type
         return sqlLogString;
     }
 

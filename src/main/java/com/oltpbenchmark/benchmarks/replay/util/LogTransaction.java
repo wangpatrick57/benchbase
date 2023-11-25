@@ -35,7 +35,7 @@ public class LogTransaction {
         }
 
         private String getFormattedString() {
-            return String.format("%s,\"%s\",\"%s\"", Long.toHexString(this.callTime), this.sqlStmtOutputString, this.detailString);
+            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, this.detailString);
         }
     }
 
