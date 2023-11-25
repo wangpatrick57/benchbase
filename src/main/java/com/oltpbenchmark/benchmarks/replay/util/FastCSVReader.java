@@ -5,7 +5,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader.ReplayFileLine;
 
 import java.lang.AutoCloseable;
 

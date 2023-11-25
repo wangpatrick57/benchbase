@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Random;
 
-import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader.ReplayFileLine;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
@@ -150,7 +150,7 @@ public class PrivateBench {
         }
     }
 
-    private static void fastReplayFileReaderScan(String filePath, boolean doPrint) {
+    private static void replayFileReaderScan(String filePath, boolean doPrint) {
         FileInputStream inputStream;
         try {
             inputStream = new FileInputStream(filePath);
@@ -158,7 +158,7 @@ public class PrivateBench {
             throw new RuntimeException("File " + filePath + " does not exist");
         }
 
-        try (FastReplayFileReader csvReader = new FastReplayFileReader(new InputStreamReader(inputStream), 4096)) {
+        try (ReplayFileReader csvReader = new ReplayFileReader(new InputStreamReader(inputStream), 4096)) {
             ReplayFileLine replayFileLine;
             long loopOuterStartTime = System.nanoTime();
             int n = 0;

@@ -20,8 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.oltpbenchmark.api.SQLStmt;
-import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader;
-import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader.ReplayFileLine;
 import com.oltpbenchmark.util.ConsoleUtil;
 
 /**
@@ -109,7 +109,7 @@ public class ReplayFileManager {
      * @brief Read the replay file and build the in-memory txn queue
      * 
      * "Loading" refers to building the in-memory txn queue. On the other hand, "reading" refers to
-     * simply reading the replay file line-by-line. FastReplayFileReader takes care of reading while
+     * simply reading the replay file line-by-line. ReplayFileReader takes care of reading while
      * this function takes care of loading.
      */
     private void loadReplayFile() {

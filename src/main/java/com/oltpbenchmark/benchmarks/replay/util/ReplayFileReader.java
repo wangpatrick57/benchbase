@@ -9,7 +9,7 @@ import java.lang.AutoCloseable;
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
  * @author phw2
  */
-public class FastReplayFileReader implements AutoCloseable {
+public class ReplayFileReader implements AutoCloseable {
     /**
      * @brief An object representation of a line in the replay file which is fully parsed but not yet processed
      */
@@ -34,7 +34,7 @@ public class FastReplayFileReader implements AutoCloseable {
     private int parseLineStartOffset;
     private int newReadOffset = 0;
 
-    public FastReplayFileReader(Reader reader, int cbufMaxSize) {
+    public ReplayFileReader(Reader reader, int cbufMaxSize) {
         this.reader = reader;
 
         this.cbufMaxSize = cbufMaxSize;

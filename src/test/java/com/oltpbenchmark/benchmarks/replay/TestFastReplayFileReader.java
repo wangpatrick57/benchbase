@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.Random;
 
-import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader;
 import com.oltpbenchmark.benchmarks.replay.util.ReplayFileManager;
-import com.oltpbenchmark.benchmarks.replay.util.FastReplayFileReader.ReplayFileLine;
+import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader.ReplayFileLine;
 
-public class TestFastReplayFileReader {
+public class TestReplayFileReader {
     /**
      * @brief A class to mock a reader reading from the contents of a file
      * 
@@ -115,7 +115,7 @@ public class TestFastReplayFileReader {
         TxnStringObj txnStringObj = TxnStringObj.generate();
         String txnString = txnStringObj.toString(true);
         char[] cbuf = txnString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, txnString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, 0, txnString.length());
         assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
     }
 
@@ -126,7 +126,7 @@ public class TestFastReplayFileReader {
         String extraChars = "hihi\n";
         String cbufString = String.format("%s%s", extraChars, txnString);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, extraChars.length(), cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, extraChars.length(), cbufString.length());
         assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
     }
 
@@ -137,7 +137,7 @@ public class TestFastReplayFileReader {
         String extraChars = "foo";
         String cbufString = String.format("%s%s", txnString, extraChars);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertTrue(txnStringObj.equalsReplayFileLine(replayFileLine));
     }
     
@@ -147,7 +147,7 @@ public class TestFastReplayFileReader {
         String txnString = txnStringObj.toString(true);
         String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1);
     }
     
@@ -158,7 +158,7 @@ public class TestFastReplayFileReader {
         String extraChars = "hello there";
         String cbufString = String.format("%s%s", extraChars, txnString);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, extraChars.length(), cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, extraChars.length(), cbufString.length());
         assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1);
     }
     
@@ -169,7 +169,7 @@ public class TestFastReplayFileReader {
         String extraChars = "goodbye now";
         String cbufString = String.format("%s%s", txnString, extraChars);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertEquals(replayFileLine.endParseOffset, cbufString.length() - 1 - extraChars.length());
     }
 
@@ -179,7 +179,7 @@ public class TestFastReplayFileReader {
         String txnString = txnStringObj.toString(false);
         String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertEquals(replayFileLine, null);
     }
 
@@ -189,7 +189,7 @@ public class TestFastReplayFileReader {
         String txnString = txnStringObj.toString(true);
         String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, cbufString.length(), cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, cbufString.length(), cbufString.length());
         assertEquals(replayFileLine, null);
     }
 
@@ -199,7 +199,7 @@ public class TestFastReplayFileReader {
         String txnString = txnStringObj.toString(true);
         String cbufString = txnString;
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, cbufString.length() + 5, cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, cbufString.length() + 5, cbufString.length());
         assertEquals(replayFileLine, null);
     }
 
@@ -207,7 +207,7 @@ public class TestFastReplayFileReader {
     public void testParseReplayTxnLineAtDelim() {
         String cbufString = String.format("%c", ReplayFileManager.REPLAY_FILE_SECTION_DELIM);
         char[] cbuf = cbufString.toCharArray();
-        ReplayFileLine replayFileLine = FastReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
+        ReplayFileLine replayFileLine = ReplayFileReader.parseReplayTxnLine(cbuf, 0, cbufString.length());
         assertEquals(replayFileLine, null);
     }
 
@@ -220,7 +220,7 @@ public class TestFastReplayFileReader {
         String txnString = txnStringObj.toString(true);
         String[] returnStrings = {txnString};
         MockReader mockReader = new MockReader(returnStrings);
-        FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnString.length());
+        ReplayFileReader replayFileReader = new ReplayFileReader(mockReader, txnString.length());
 
         // check content of first line
         ReplayFileLine replayFileLine = replayFileReader.readLine();
@@ -243,7 +243,7 @@ public class TestFastReplayFileReader {
         String[] txnStrings = {txnStringObjs[0].toString(true), txnStringObjs[1].toString(true)};
         assertEquals(txnStrings[0].length(), txnStrings[1].length());
         MockReader mockReader = new MockReader(txnStrings);
-        FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnStrings[0].length());
+        ReplayFileReader replayFileReader = new ReplayFileReader(mockReader, txnStrings[0].length());
 
         // check content of first line
         ReplayFileLine replayFileLine = replayFileReader.readLine();
@@ -272,7 +272,7 @@ public class TestFastReplayFileReader {
         int numShiftChars = 3;
         String[] returnStrings = {txnStrings[0] + txnStrings[1].substring(0, numShiftChars), txnStrings[1].substring(numShiftChars)};
         MockReader mockReader = new MockReader(returnStrings);
-        FastReplayFileReader replayFileReader = new FastReplayFileReader(mockReader, txnStrings[0].length() + numShiftChars);
+        ReplayFileReader replayFileReader = new ReplayFileReader(mockReader, txnStrings[0].length() + numShiftChars);
 
         // check content of first line
         ReplayFileLine replayFileLine = replayFileReader.readLine();
