@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.List;
 
 /**
@@ -43,7 +44,7 @@ public class OTMetricsWorker extends Worker<OTMetricsBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTrans, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
         if (nextTrans.getProcedureClass().equals(GetSessionRange.class)) {
             execGetSessionRange(conn);
         }

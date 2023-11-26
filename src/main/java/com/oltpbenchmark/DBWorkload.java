@@ -34,6 +34,7 @@ import org.apache.commons.configuration2.convert.DisabledListDelimiterHandler;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.apache.commons.configuration2.tree.xpath.XPathExpressionEngine;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -51,6 +54,7 @@ public class DBWorkload {
 
     private static final String RATE_DISABLED = "disabled";
     private static final String RATE_UNLIMITED = "unlimited";
+    private static final String REPLAY_SPEEDUP_UNLIMITED = "unlimited";
 
     /**
      * @param args
@@ -315,6 +319,48 @@ public class DBWorkload {
                 // a serial (rather than random) order.
                 boolean serial = Boolean.parseBoolean(work.getString("serial", Boolean.FALSE.toString()));
 
+                // We now have the option of replaying queries from a log file
+                boolean replay = Boolean.parseBoolean(work.getString("replay", Boolean.FALSE.toString()));
+                String logFilePath = DBWorkload.expandTilde(work.getString("logfile", ""));
+                boolean replaySpeedupLimited = true;
+                String replaySpeedupString = work.getString("replayspeedup", "");
+                double replaySpeedup = 1;
+                if (replay) {
+                    if (logFilePath == "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is a replay phase but logfile is not specified", i));
+                        System.exit(-1);
+                    }
+                    if (replaySpeedupString != "") {
+                        if (replaySpeedupString.equals(REPLAY_SPEEDUP_UNLIMITED)) {
+                            replaySpeedupLimited = false;
+                        } else {
+                            try {
+                                replaySpeedup = Double.parseDouble(replaySpeedupString);
+                                if (replaySpeedup <= 0) {
+                                    LOG.error("Speedup must be > 0.");
+                                    System.exit(-1);
+                                }
+                            } catch (NumberFormatException e) {
+                                LOG.error(String.format("Speedup must be '%s' or a number", REPLAY_SPEEDUP_UNLIMITED));
+                                System.exit(-1);
+                            }
+                        }
+                    }
+                } else {
+                    if (logFilePath != "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is not a replay phase but logfile is specified", i));
+                        System.exit(-1);
+                    }
+                    if (replaySpeedupString != "") {
+                        LOG.error(String.format("Configuration error in work %d: " + "Phase is not a replay phase but speedup is specified", i));
+                        System.exit(-1);
+                    }
+                }
+
+                if (serial && replay) {
+                    LOG.error(String.format("Configuration error in work %d: " + "A phase cannot be both serial and replay", i));
+                    System.exit(-1);
+                }
 
                 int activeTerminals;
                 activeTerminals = work.getInt("active_terminals[not(@bench)]", terminals);
@@ -335,12 +381,19 @@ public class DBWorkload {
                 if (!timed) {
                     if (serial) {
                         LOG.info("Timer disabled for serial run; will execute" + " all queries exactly once.");
+                    } else if (replay) {
+                        LOG.info("Timer disabled for replay run; will execute" + " all queries in the log file.");
                     } else {
                         LOG.error("Must provide positive time bound for" + " non-serial executions. Either provide" + " a valid time or enable serial mode.");
                         System.exit(-1);
                     }
-                } else if (serial) {
-                    LOG.info("Timer enabled for serial run; will run queries" + " serially in a loop until the timer expires.");
+                } else {
+                    if (serial) {
+                        LOG.info("Timer enabled for serial run; will run queries" + " serially in a loop until the timer expires.");
+                    } else if (replay) {
+                        LOG.info("Timer enabled for replay run; will run queries in the log file in a loop until the timer expires");
+                        throw new NotImplementedException("Timed replay runs are not currently implemented");
+                    }
                 }
                 if (warmup < 0) {
                     LOG.error("Must provide non-negative time bound for" + " warmup.");
@@ -364,7 +417,7 @@ public class DBWorkload {
                 }
 
 
-                wrkld.addPhase(i, time, warmup, rate, weights, rateLimited, disabled, serial, timed, activeTerminals, arrival);
+                wrkld.addPhase(i, time, warmup, rate, replaySpeedup, weights, rateLimited, disabled, serial, replaySpeedupLimited, replay, timed, activeTerminals, arrival, logFilePath);
             }
 
             // CHECKING INPUT PHASES
@@ -670,5 +723,17 @@ public class DBWorkload {
             return (val != null && val.equalsIgnoreCase("true"));
         }
         return (false);
+    }
+
+    /**
+     * Expands a path starting with ~ to be an absolute path from the user's home
+     * @param path
+     * @return The expanded path
+     */
+    public static String expandTilde(String path) {
+        if (path.startsWith("~")) {
+            return System.getProperty("user.home") + path.substring(1);
+        }
+        return path;
     }
 }

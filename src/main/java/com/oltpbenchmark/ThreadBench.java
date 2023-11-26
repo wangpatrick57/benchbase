@@ -199,6 +199,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                 // state to mark completion
                 {
                     phaseComplete = testState.getState() == State.LATENCY_COMPLETE;
+                } else if (phase.isReplay()) {
+                    phaseComplete = !phase.existsNextReplayTransaction();
                 } else {
                     phaseComplete = testState.getState() == State.MEASURE
                             && (start + delta <= now);
@@ -257,13 +259,19 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
             // Compute the next interval
             // and how many messages to deliver
             if (phase != null) {
-                intervalNs = 0;
-                nextToAdd = 0;
-                do {
-                    intervalNs += getInterval(lowestRate, phase.getArrival());
-                    nextToAdd++;
-                } while ((-diff) > intervalNs && !lastEntry);
-                nextInterval += intervalNs;
+                if (phase.isReplay()) {
+                    // nextToAdd isn't used in replay phases
+                    // nextInterval is simply the time of the next transaction
+                    nextInterval = phase.getNextReplayTransactionTimestamp();
+                } else {
+                    intervalNs = 0;
+                    nextToAdd = 0;
+                    do {
+                        intervalNs += getInterval(lowestRate, phase.getArrival());
+                        nextToAdd++;
+                    } while ((-diff) > intervalNs && !lastEntry);
+                    nextInterval += intervalNs;
+                }
             }
 
             // Update the test state appropriately

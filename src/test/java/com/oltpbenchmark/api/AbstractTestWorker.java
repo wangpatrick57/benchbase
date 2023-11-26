@@ -26,6 +26,7 @@ import org.apache.commons.lang3.time.StopWatch;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
@@ -91,7 +92,7 @@ public abstract class AbstractTestWorker<T extends BenchmarkModule> extends Abst
             try {
                 LOG.info("starting execution of [{}]", txnType);
                 sw.start();
-                w.executeWork(this.conn, txnType);
+                w.executeWork(this.conn, txnType, Optional.empty());
                 sw.stop();
 
 

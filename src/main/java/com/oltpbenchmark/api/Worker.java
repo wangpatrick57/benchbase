@@ -30,7 +30,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -256,6 +258,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             // PART 3: Execute work
 
             TransactionType transactionType = getTransactionType(pieceOfWork, prePhase, preState, workloadState);
+            Optional<List<Object>> runArgs = pieceOfWork.getRunArgs();
 
             if (!transactionType.equals(TransactionType.INVALID)) {
 
@@ -279,7 +282,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
                 long start = System.nanoTime();
 
-                doWork(configuration.getDatabaseType(), transactionType);
+                doWork(configuration.getDatabaseType(), transactionType, runArgs);
 
                 long end = System.nanoTime();
 
@@ -383,8 +386,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @param databaseType TODO
      * @param transactionType TODO
      */
-    protected final void doWork(DatabaseType databaseType, TransactionType transactionType) {
-
+    protected final void doWork(DatabaseType databaseType, TransactionType transactionType, Optional<List<Object>> runArgs) {
         try {
             int retryCount = 0;
             int maxRetryCount = configuration.getMaxRetries();
@@ -413,7 +415,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                         LOG.debug(String.format("%s %s attempting...", this, transactionType));
                     }
 
-                    status = this.executeWork(conn, transactionType);
+                    status = this.executeWork(conn, transactionType, runArgs);
 
                     if (LOG.isDebugEnabled()) {
                         LOG.debug(String.format("%s %s completed with status [%s]...", this, transactionType, status.name()));
@@ -525,11 +527,12 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      *
      * @param conn    TODO
      * @param txnType TODO
+     * @param runArgs Arguments used to run the Procedure for this TransactionType. Set to Optional.empty() for no arguments.
      * @return TODO
      * @throws UserAbortException TODO
      * @throws SQLException       TODO
      */
-    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType) throws UserAbortException, SQLException;
+    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType, Optional<List<Object>> runArgs) throws UserAbortException, SQLException;
 
     /**
      * Called at the end of the test to do any clean up that may be required.

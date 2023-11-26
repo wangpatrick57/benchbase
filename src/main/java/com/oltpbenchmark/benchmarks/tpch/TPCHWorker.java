@@ -26,6 +26,8 @@ import com.oltpbenchmark.util.RandomGenerator;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Optional;
+import java.util.List;
 
 public class TPCHWorker extends Worker<TPCHBenchmark> {
 
@@ -38,7 +40,7 @@ public class TPCHWorker extends Worker<TPCHBenchmark> {
     }
 
     @Override
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction) throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction, Optional<List<Object>> runArgs) throws UserAbortException, SQLException {
         try {
             GenericQuery proc = (GenericQuery) this.getProcedure(nextTransaction.getProcedureClass());
             proc.run(conn, rand, this.configuration.getScaleFactor());

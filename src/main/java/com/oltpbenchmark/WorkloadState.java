@@ -45,7 +45,7 @@ public class WorkloadState {
     private int workersWorking = 0;
     private int workerNeedSleep;
 
-    private Phase currentPhase = null;
+private Phase currentPhase = null;
 
     public WorkloadState(BenchmarkState benchmarkState, List<Phase> works, int num_terminals) {
         this.benchmarkState = benchmarkState;
@@ -66,17 +66,26 @@ public class WorkloadState {
                 workQueue.clear();
             }
 
-            // Only use the work queue if the phase is enabled and rate limited.
+            // Only use the work queue if the phase is enabled, rate limited, and replay speedup limited.
             if (currentPhase == null || currentPhase.isDisabled()
-                    || !currentPhase.isRateLimited() || currentPhase.isSerial()) {
+                    || !currentPhase.isRateLimited() || currentPhase.isSerial()
+                    || !currentPhase.isReplaySpeedupLimited()) {
                 return;
             }
-            
-            // Add the specified number of procedures to the end of the queue.
-            // If we can't keep up with current rate, truncate transactions
-            for (int i = 0; i < amount && workQueue.size() <= RATE_QUEUE_LIMIT; ++i) {
-                workQueue.add(new SubmittedProcedure(currentPhase.chooseTransaction()));
-                workAdded++;
+
+            if (currentPhase.isReplay()) {
+                // If the phase is a replay phase, ignore amount and add to the queue based on timestamp
+                while (currentPhase.existsNextReplayTransaction() && currentPhase.isNextReplayTransactionInPast()) {
+                    workQueue.add(currentPhase.generateSubmittedProcedure());
+                    workAdded++;
+                }
+            } else {
+                // Add the specified number of procedures to the end of the queue.
+                // If we can't keep up with current rate, truncate transactions
+                for (int i = 0; i < amount && workQueue.size() <= RATE_QUEUE_LIMIT; ++i) {
+                    workQueue.add(currentPhase.generateSubmittedProcedure());
+                    workAdded++;
+                }
             }
 
             // Wake up sleeping workers to deal with the new work.
@@ -119,16 +128,34 @@ public class WorkloadState {
                 }
 
                 ++workersWorking;
-                return new SubmittedProcedure(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
+                return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
             }
         }
 
-        // Unlimited-rate phases don't use the work queue.
-        if (currentPhase != null && !currentPhase.isRateLimited()) {
+        // Unlimited-rate and unlimited-replay-speedup phases don't use the work queue.
+        if (currentPhase != null && (!currentPhase.isRateLimited() || !currentPhase.isReplaySpeedupLimited())) {
             synchronized (this) {
+                // if we ran out of replay transactions in a replay run, don't return until the phase is over
+                if (!currentPhase.isReplaySpeedupLimited() && !currentPhase.existsNextReplayTransaction()) {
+                    while (true) {
+                        if (this.shouldFetchWorkExit()) {
+                            return null;
+                        }
+
+                        try {
+                            this.wait();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
                 ++workersWorking;
+
+                // generateSubmittedProcedure() is inside "synchronized (this) {...}" because it function reads from a central queue
+                // for replay phases. if generateSubmittedProcedure() was outside "synchronized (this) {...}", it would be possible
+                // for generateSubmittedProcedure() to be called more times than the # of remaining items in the queue
+                return currentPhase.generateSubmittedProcedure(getGlobalState() == State.COLD_QUERY);
             }
-            return new SubmittedProcedure(currentPhase.chooseTransaction(getGlobalState() == State.COLD_QUERY));
         }
 
         synchronized (this) {
@@ -136,8 +163,7 @@ public class WorkloadState {
             if (workQueue.peek() == null) {
                 workersWaiting += 1;
                 while (workQueue.peek() == null) {
-                    if (this.benchmarkState.getState() == State.EXIT
-                            || this.benchmarkState.getState() == State.DONE) {
+                    if (this.shouldFetchWorkExit()) {
                         return null;
                     }
 
@@ -155,6 +181,10 @@ public class WorkloadState {
 
             return workQueue.remove();
         }
+    }
+
+    public boolean shouldFetchWorkExit() {
+        return getGlobalState() == State.EXIT || getGlobalState() == State.DONE;
     }
 
     public void finishedWork() {
@@ -207,7 +237,7 @@ public class WorkloadState {
             {
                 workerNeedSleep = 0;
             } else {
-                this.currentPhase.resetSerial();
+                this.currentPhase.onStart();
                 if (this.currentPhase.isDisabled())
                 // Phase disabled---everyone should sleep
                 {

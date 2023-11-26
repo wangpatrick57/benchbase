@@ -17,6 +17,9 @@
 
 package com.oltpbenchmark;
 
+import java.util.List;
+import java.util.Optional;
+
 /**
  * This class is used for keeping track of the procedures that have been
  * submitted to the system when running a rate-limited benchmark.
@@ -26,9 +29,15 @@ package com.oltpbenchmark;
 public class SubmittedProcedure {
     private final int type;
     private final long startTime;
+    private final Optional<List<Object>> runArgs;
 
     SubmittedProcedure(int type) {
+        this(type, null);
+    }
+
+    SubmittedProcedure(int type, Optional<List<Object>> runArgs) {
         this.type = type;
+        this.runArgs = runArgs;
         this.startTime = System.nanoTime();
     }
 
@@ -38,5 +47,9 @@ public class SubmittedProcedure {
 
     public long getStartTime() {
         return startTime;
+    }
+
+    public Optional<List<Object>> getRunArgs() {
+        return runArgs;
     }
 }

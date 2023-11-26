@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<parameters>
+
+    <!-- Connection details -->
+    <type>POSTGRES</type>
+    <driver>org.postgresql.Driver</driver>
+    <url>jdbc:postgresql://localhost:5432/benchbase?sslmode=disable&amp;ApplicationName=replay&amp;reWriteBatchedInserts=true</url>
+    <username>admin</username>
+    <password>password</password>
+    <isolation>TRANSACTION_READ_COMMITTED</isolation>
+    <batchsize>128</batchsize>
+    <!-- One retry is important or else we'll end up retrying transactions which aborted in the replay -->
+    <retries>1</retries>
+
+    <!-- Note: these example replay reuses TPC-C queries and data as a demonstration, but others are possible.
+      To test this sample as is, you must first run benchbase with parameters `create=true load=true` and
+      `config=sample_tpcc_config.xml` to load the TPC-C data to the target database.
+    -->
+
+    <!-- The workload -->
+    <!-- Terminals controls the # of workers. Try increasing this if the system cannot keep up with the replay file -->
+    <terminals>1</terminals>
+    <works>
+        <work>
+            <!-- Needs to be true for all replay phases -->
+            <replay>true</replay>
+            <!-- Absolute or relative path (relative to where BenchBase is executed). ~/ is handled -->
+            <logfile>~/benchbase/config/postgres/sample_tpcc_log.csv</logfile>
+            <weights>100</weights>
+
+            <!-- Rate is not used but need to be specified to not crash BenchBase -->
+            <rate>1</rate>
+        </work>
+    </works>
+
+    <!-- Transaction types -->
+    <!-- A DynamicProcedure executes an arbitrary list of SQL statements. It is the only transaction type we need -->
+    <transactiontypes>
+        <transactiontype>
+            <name>DynamicProcedure</name>
+            <preExecutionWait>0</preExecutionWait>
+            <postExecutionWait>0</postExecutionWait>
+        </transactiontype>
+    </transactiontypes>
+    
+</parameters>
