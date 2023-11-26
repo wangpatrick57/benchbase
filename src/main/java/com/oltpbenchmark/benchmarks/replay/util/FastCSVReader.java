@@ -79,14 +79,14 @@ public class FastCSVReader implements AutoCloseable {
     public static ReplayFileLine csvLineToReplayFileLine(List<String> csvLine) {
         long logTime = Long.parseLong(csvLine.get(0));
         String sqlStmtIDOrString = csvLine.get(1);
-        Object[] params = ReplayFileReader.parseParamsFromString(csvLine.get(2));
+        Object[] params = ReplayFileReader.stringToParams(csvLine.get(2));
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, 0);
     }
 
     public static ReplayFileLine fieldsToReplayFileLine(String[] fields) {
         long logTime = Long.parseLong(fields[0]);
         String sqlStmtIDOrString = fields[1];
-        Object[] params = ReplayFileReader.parseParamsFromString(fields[2]);
+        Object[] params = ReplayFileReader.stringToParams(fields[2]);
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, 0);
     }
 

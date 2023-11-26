@@ -5,9 +5,8 @@ import java.io.Reader;
 import java.lang.AutoCloseable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import org.hsqldb.types.Types;
+import java.sql.Types;
 
 /**
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
@@ -37,15 +36,6 @@ public class ReplayFileReader implements AutoCloseable {
     private int cbufSize;
     private int parseLineStartOffset;
     private int newReadOffset = 0;
-    public static final Map<Integer, Character> SQL_TYPE_CHARS = Map.of(
-        Types.BIGINT, 'i',
-        Types.DECIMAL, 'd',
-        Types.VARCHAR, 'v',
-        Types.BOOLEAN, 'b',
-        Types.DATE, 'D',
-        Types.TIME, 't',
-        Types.TIMESTAMP, 'T'
-    );
 
     public ReplayFileReader(Reader reader, int cbufMaxSize) {
         this.reader = reader;
@@ -149,11 +139,16 @@ public class ReplayFileReader implements AutoCloseable {
         String sqlStmtIDOrString = ReplayFileManager.charBufToString(cbuf, endOffsets[0] + 2, endOffsets[1] - 1);
         assert(cbuf[endOffsets[1] + 1] == '"' && cbuf[endOffsets[2] - 1] == '"');
         String paramsString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
-        Object[] params = ReplayFileReader.parseParamsFromString(paramsString);
+        Object[] params = ReplayFileReader.stringToParams(paramsString);
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2]);
     }
 
-    public static char javaTypeToTypeChar(Object obj) {
+    /**
+     * Get the typeChar of an object based on its class
+     * @param obj The object
+     * @return Its typeChar, or null if it is of an unknown type
+     */
+    public static Character getTypeCharOfObject(Object obj) {
         Class<? extends Object> cls = obj.getClass();
 
         if (cls == Long.class) {
@@ -172,11 +167,11 @@ public class ReplayFileReader implements AutoCloseable {
             return 'T';
         }
 
-        assert false : String.format("javaTypeToTypeChar: obj is of unknown type %s", cls.toString());
-        return Types.NULL;
+        assert false : String.format("getTypeCharOfObject: obj is of unknown type %s", cls.toString());
+        return null;
     }
 
-    private static String convertParamToString(Object param, char typeChar) {
+    private static String paramToString(Object param, char typeChar) {
         switch (typeChar) {
         case 'i':
         case 'd':
@@ -195,7 +190,7 @@ public class ReplayFileReader implements AutoCloseable {
         }
     }
 
-    public static Object parseParamFromString(String paramString, char typeChar) {
+    public static Object stringToParam(String paramString, char typeChar) {
         switch (typeChar) {
         case 'i':
             return Long.parseLong(paramString);
@@ -217,21 +212,21 @@ public class ReplayFileReader implements AutoCloseable {
         }
     }
 
-    public static String convertParamsToString(Object[] params) {
+    public static String paramsToString(Object[] params) {
         StringBuilder sb = new StringBuilder();
 
         for (Object param : params) {
-            char typeChar = javaTypeToTypeChar(param);
+            char typeChar = getTypeCharOfObject(param);
             sb.append(typeChar);
             sb.append('\'');
-            sb.append(convertParamToString(param, typeChar));
+            sb.append(paramToString(param, typeChar));
             sb.append('\'');
         }
 
         return sb.toString();
     }
 
-    private static Object[] parseParamsFromString(String paramsString) {
+    private static Object[] stringToParams(String paramsString) {
         List<Object> params = new ArrayList<>();
         Character currTypeChar = null; // null is used to indicate errors
         StringBuilder currParamSB = new StringBuilder();
@@ -244,7 +239,7 @@ public class ReplayFileReader implements AutoCloseable {
                 if (c == '\'') {
                     String currParamString = currParamSB.toString();
                     assert currTypeChar != null : String.format("no type char for currParamString(%s)", currParamString);
-                    params.add(ReplayFileReader.parseParamFromString(currParamString, currTypeChar));
+                    params.add(ReplayFileReader.stringToParam(currParamString, currTypeChar));
                     currTypeChar = null;
                     currParamSB = new StringBuilder();
                     isInSingleQuotes = false;

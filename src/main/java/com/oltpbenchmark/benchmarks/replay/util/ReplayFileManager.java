@@ -14,12 +14,10 @@ import java.util.Queue;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
-import org.hsqldb.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.oltpbenchmark.api.SQLStmt;
-import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader;
 import com.oltpbenchmark.benchmarks.replay.util.ReplayFileReader.ReplayFileLine;
 import com.oltpbenchmark.util.ConsoleUtil;
 

@@ -99,7 +99,13 @@ public class PostgresLogFileParser implements LogFileParser {
                         continue;
                     }
                     String detailString = fields[PGLOG_DETAIL_INDEX];
-                    Object[] params = PostgresLogFileParser.parseParamsFromDetail(detailString);
+                    char[] typeChars = PostgresLogFileParser.guessTypeCharsFromDetail(detailString);
+                    Object[] params = PostgresLogFileParser.extractParamsFromDetail(detailString, typeChars);
+                    // it's possible for params to be null. we do this just to avoid crashing the program if this happens
+                    if (params == null) {
+                        LOG.warn("params was null. This indicates an error in parsing");
+                        params = new Object[0];
+                    }
                     String vxid = fields[PGLOG_VXID_INDEX];
 
                     // manage activeTransactions and logTransactionQueue based on what the line is
@@ -253,19 +259,62 @@ public class PostgresLogFileParser implements LogFileParser {
     }
 
     /**
-     * Parse SQL parameters from a raw "detail" string in a Postgres CSV log file
+     * @brief Guess the type chars from a SQL parameter detail string
+     * @param detailString The string in the "detail" field of the log file
+     * @return A char[] or null if the detail is not a SQL parameter detail string
+     */
+    private static char[] guessTypeCharsFromDetail(String detailString) {
+        String[] paramStrings = extractParamStringsFromDetail(detailString);
+        if (paramStrings == null) {
+            return null;
+        }
+
+        char[] typeChars = new char[paramStrings.length];
+        for (int i = 0; i < paramStrings.length; i++) {
+            String paramString = paramStrings[i];
+            char typeChar = PostgresLogFileParser.guessTypeCharFromParamString(paramString);
+            typeChars[i] = typeChar;
+        }
+        
+        return typeChars;
+    }
+
+    /**
+     * @brief Extract the param objects from a SQL parameter detail string
+     * @param detailString The string in the "detail" field of the log file
+     * @param typeChars The typeChars of all the parameters
+     * @return A Object[] or null if the detail is not a SQL parameter detail string
+     */
+    private static Object[] extractParamsFromDetail(String detailString, char[] typeChars) {
+        String[] paramStrings = extractParamStringsFromDetail(detailString);
+        if (paramStrings == null) {
+            return null;
+        }
+        assert typeChars.length == paramStrings.length : String.format("there are %d params but %d types", paramStrings.length, typeChars.length);
+
+        Object[] params = new Object[paramStrings.length];
+        for (int i = 0; i < paramStrings.length; i++) {
+            String paramString = paramStrings[i];
+            char typeChar = typeChars[i];
+            // TODO: the formats of the strings in pg and replay file are different so I need to make a new function
+            params[i] = ReplayFileReader.stringToParam(paramString, typeChar);
+        }
+        
+        return params;
+    }
+
+    /**
+     * @brief Extract the param strings from a SQL parameter detail string
      * 
-     * SQL parameter details start with "parameters: "
-     * This function assumes that all parameters in the detail string are listed in order ($1= comes before $2= as so on)
-     * We return an empty list so that it can be passed into Procedure.getPreparedStatement() safely
+     * A "detail string" is one that appears in the PGLOG_DETAIL_INDEXth position in the log file
+     * A "SQL parameter detail string" is a detail string that starts with "parameters: "
      * 
      * @param detailString The string in the "detail" field of the log file
-     * @param typeChars The types (as typeChars from ReplayFileReader) of the params
-     * @return An Object[] or null if the detail is not a SQL parameter detail
+     * @return A String[] or null if the detail is not a SQL parameter detail string
+     * 
+     * @pre This function assumes that all parameters in the detail string are listed in order ($1= comes before $2= as so on)
      */
-    private static Object[] parseParamsFromDetail(String detailString, char[] typeChars) {
-        long startTime = System.nanoTime();
-        List<Object> params = new ArrayList<>();
+    private static String[] extractParamStringsFromDetail(String detailString) {
         Pair<String, String> typeAndContent = PostgresLogFileParser.splitTypeAndContent(detailString);
         
         if (typeAndContent != null) {
@@ -273,16 +322,16 @@ public class PostgresLogFileParser implements LogFileParser {
             String detailContent = typeAndContent.second;
 
             if (detailType.equals("parameters")) {
+                List<String> paramStrings = new ArrayList<>();
                 StringBuilder currParamSB = new StringBuilder();
                 boolean isInQuotes = false;
+
                 for (int i = 0; i < detailContent.length(); i++) {
                     char c = detailContent.charAt(i);
                     if (isInQuotes) {
                         if (c == '\'') {
-                            char currTypeChar = typeChars[params.size()];
                             String currParamString = currParamSB.toString();
-                            Object param = ReplayFileReader.parseParamFromString(currParamString, currTypeChar);
-                            params.add(param);
+                            paramStrings.add(currParamString);
                             currParamSB = new StringBuilder();
                             isInQuotes = false;
                         } else {
@@ -294,33 +343,36 @@ public class PostgresLogFileParser implements LogFileParser {
                         }
                     }
                 }
+
+                return paramStrings.toArray(new String[0]);
             }
         }
 
-        timeInParseParamsFromDetail += System.nanoTime() - startTime;
-        assert params.size() == typeChars.length : String.format("we found %d params but we were given %d types", params.size(), typeChars.length);
-        return params.toArray();
+        return null;
     }
 
-    private static Object parseSQLLogStringToObject(String sqlLogString) {
-        // Check if the string is null or empty
-        if (sqlLogString == null || sqlLogString.isEmpty()) {
-            return null;
-        }
-    
+    /**
+     * @brief Guess the typeChar of a parameter based on its string in the Postgres log file
+     * 
+     * Note that this function does not handle all typeChars yet
+     * 
+     * @param paramString Its string in the Postgres log file
+     * @return The best guess at what the typeChar is
+     */
+    private static char guessTypeCharFromParamString(String paramString) {
         // Check if the string represents an integer
         try {
             // always parse it as a long so that it'll handle numbers of any size
-            long data = Long.parseLong(sqlLogString);
-            return data;
+            long data = Long.parseLong(paramString);
+            return ReplayFileReader.getTypeCharOfObject(data);
         } catch (NumberFormatException e) {
             // Not an integer
         }
     
         // Check if the string represents a double
         try {
-            double data = Double.parseDouble(sqlLogString);
-            return data;
+            double data = Double.parseDouble(paramString);
+            return ReplayFileReader.getTypeCharOfObject(data);
         } catch (NumberFormatException e) {
             // Not a double
         }
@@ -331,15 +383,15 @@ public class PostgresLogFileParser implements LogFileParser {
             formatterBuilder.appendPattern("yyyy-MM-dd HH:mm:ss");
             formatterBuilder.appendFraction(ChronoField.MILLI_OF_SECOND, 0, 9, true);
             DateTimeFormatter formatter = formatterBuilder.toFormatter();
-            LocalDateTime localDateTime = LocalDateTime.parse(sqlLogString, formatter);
+            LocalDateTime localDateTime = LocalDateTime.parse(paramString, formatter);
             Timestamp data = Timestamp.valueOf(localDateTime);
-            return data;
+            return ReplayFileReader.getTypeCharOfObject(data);
         } catch (DateTimeParseException e) {
             // Not a timestamp
         }
     
         // If all else fails, assume it's a string type
-        return sqlLogString;
+        return ReplayFileReader.getTypeCharOfObject(paramString);
     }
 
     /**

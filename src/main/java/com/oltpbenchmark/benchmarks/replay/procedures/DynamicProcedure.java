@@ -82,6 +82,7 @@ public class DynamicProcedure extends Procedure {
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
             Object[] params = replayTransaction.peekParams();
+
             // remove after peeking, even if the prepared statement is eventually not successful
             replayTransaction.removeSQLStmtCall();
 
