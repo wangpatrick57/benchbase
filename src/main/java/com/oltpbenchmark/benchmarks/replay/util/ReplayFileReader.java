@@ -36,6 +36,8 @@ public class ReplayFileReader implements AutoCloseable {
     private int cbufSize;
     private int parseLineStartOffset;
     private int newReadOffset = 0;
+    
+    public static long timeSpentInReplayStringToParams = 0;
 
     public ReplayFileReader(Reader reader, int cbufMaxSize) {
         this.reader = reader;
@@ -233,10 +235,12 @@ public class ReplayFileReader implements AutoCloseable {
             sb.append('\'');
         }
 
-        return sb.toString();
+        String s = sb.toString();
+        return s;
     }
 
     public static Object[] replayStringToParams(String paramsString) {
+        long startTime = System.nanoTime();
         List<Object> params = new ArrayList<>();
         Character currTypeChar = null; // null is used to indicate errors
         StringBuilder currParamSB = new StringBuilder();
@@ -266,6 +270,8 @@ public class ReplayFileReader implements AutoCloseable {
             }
         }
 
-        return params.toArray();
+        Object[] paramsAsArray = params.toArray();
+        ReplayFileReader.timeSpentInReplayStringToParams += System.nanoTime() - startTime;
+        return paramsAsArray;
     }
 }
