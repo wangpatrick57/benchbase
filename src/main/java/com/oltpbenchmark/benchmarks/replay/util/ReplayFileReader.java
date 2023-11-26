@@ -37,7 +37,7 @@ public class ReplayFileReader implements AutoCloseable {
     private int cbufSize;
     private int parseLineStartOffset;
     private int newReadOffset = 0;
-    private static final Map<Integer, Character> SQL_TYPE_CHARS = Map.of(
+    public static final Map<Integer, Character> SQL_TYPE_CHARS = Map.of(
         Types.BIGINT, 'i',
         Types.DECIMAL, 'd',
         Types.VARCHAR, 'v',
@@ -153,26 +153,26 @@ public class ReplayFileReader implements AutoCloseable {
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2]);
     }
 
-    public static int javaTypeToSQLType(Object obj) {
+    public static char javaTypeToTypeChar(Object obj) {
         Class<? extends Object> cls = obj.getClass();
 
         if (cls == Long.class) {
-            return Types.BIGINT;
+            return 'i';
         } else if (cls == Double.class) {
-            return Types.DECIMAL;
+            return 'd';
         } else if (cls == String.class) {
-            return Types.VARCHAR;
+            return 'v';
         } else if (cls == Boolean.class) {
-            return Types.BOOLEAN;
+            return 'b';
         } else if (cls == java.sql.Date.class) {
-            return Types.DATE;
+            return 'D';
         } else if (cls == java.sql.Time.class) {
-            return Types.TIME;
+            return 't';
         } else if (cls == java.sql.Timestamp.class) {
-            return Types.TIMESTAMP;
+            return 'T';
         }
 
-        assert false : String.format("javaTypeToSQLType: obj is of unknown type %s", cls.toString());
+        assert false : String.format("javaTypeToTypeChar: obj is of unknown type %s", cls.toString());
         return Types.NULL;
     }
 
@@ -195,7 +195,7 @@ public class ReplayFileReader implements AutoCloseable {
         }
     }
 
-    private static Object parseParamFromString(String paramString, char typeChar) {
+    public static Object parseParamFromString(String paramString, char typeChar) {
         switch (typeChar) {
         case 'i':
             return Long.parseLong(paramString);
@@ -221,8 +221,7 @@ public class ReplayFileReader implements AutoCloseable {
         StringBuilder sb = new StringBuilder();
 
         for (Object param : params) {
-            int type = javaTypeToSQLType(param);
-            char typeChar = SQL_TYPE_CHARS.get(type);
+            char typeChar = javaTypeToTypeChar(param);
             sb.append(typeChar);
             sb.append('\'');
             sb.append(convertParamToString(param, typeChar));
@@ -232,7 +231,7 @@ public class ReplayFileReader implements AutoCloseable {
         return sb.toString();
     }
 
-    public static Object[] parseParamsFromString(String paramsString) {
+    private static Object[] parseParamsFromString(String paramsString) {
         List<Object> params = new ArrayList<>();
         Character currTypeChar = null; // null is used to indicate errors
         StringBuilder currParamSB = new StringBuilder();

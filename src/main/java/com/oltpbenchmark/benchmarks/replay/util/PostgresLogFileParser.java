@@ -260,11 +260,12 @@ public class PostgresLogFileParser implements LogFileParser {
      * We return an empty list so that it can be passed into Procedure.getPreparedStatement() safely
      * 
      * @param detailString The string in the "detail" field of the log file
+     * @param typeChars The types (as typeChars from ReplayFileReader) of the params
      * @return An Object[] or null if the detail is not a SQL parameter detail
      */
-    public static Object[] parseParamsFromDetail(String detailString) { // PAT DEBUG: make this private later
+    private static Object[] parseParamsFromDetail(String detailString, char[] typeChars) {
         long startTime = System.nanoTime();
-        List<Object> valuesList = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
         Pair<String, String> typeAndContent = PostgresLogFileParser.splitTypeAndContent(detailString);
         
         if (typeAndContent != null) {
@@ -272,17 +273,20 @@ public class PostgresLogFileParser implements LogFileParser {
             String detailContent = typeAndContent.second;
 
             if (detailType.equals("parameters")) {
-                StringBuilder currentParamStr = new StringBuilder();
+                StringBuilder currParamSB = new StringBuilder();
                 boolean isInQuotes = false;
                 for (int i = 0; i < detailContent.length(); i++) {
                     char c = detailContent.charAt(i);
                     if (isInQuotes) {
                         if (c == '\'') {
-                            valuesList.add(PostgresLogFileParser.parseSQLLogStringToObject(currentParamStr.toString()));
-                            currentParamStr = new StringBuilder(); // reset builder
+                            char currTypeChar = typeChars[params.size()];
+                            String currParamString = currParamSB.toString();
+                            Object param = ReplayFileReader.parseParamFromString(currParamString, currTypeChar);
+                            params.add(param);
+                            currParamSB = new StringBuilder();
                             isInQuotes = false;
                         } else {
-                            currentParamStr.append(c);
+                            currParamSB.append(c);
                         }
                     } else {
                         if (c == '\'') {
@@ -294,7 +298,8 @@ public class PostgresLogFileParser implements LogFileParser {
         }
 
         timeInParseParamsFromDetail += System.nanoTime() - startTime;
-        return valuesList.toArray();
+        assert params.size() == typeChars.length : String.format("we found %d params but we were given %d types", params.size(), typeChars.length);
+        return params.toArray();
     }
 
     private static Object parseSQLLogStringToObject(String sqlLogString) {
