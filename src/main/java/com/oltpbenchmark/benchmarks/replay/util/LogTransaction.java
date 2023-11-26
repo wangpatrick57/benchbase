@@ -40,7 +40,7 @@ public class LogTransaction {
         }
 
         public String toString() {
-            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, ReplayFileReader.paramsToString(this.params));
+            return String.format("%d,\"%s\",\"%s\"", this.callTime, this.sqlStmtOutputString, ReplayFileReader.paramsToReplayString(this.params));
         }
     }
 

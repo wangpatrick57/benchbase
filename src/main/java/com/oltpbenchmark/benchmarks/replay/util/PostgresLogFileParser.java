@@ -40,6 +40,15 @@ public class PostgresLogFileParser implements LogFileParser {
     private static final String BEGIN_STRING = "BEGIN";
     private static final String COMMIT_STRING = "COMMIT";
     private static final String ROLLBACK_STRING = "ROLLBACK";
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = createTimestampFormatter();
+    private static DateTimeFormatter createTimestampFormatter() {
+        DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder();
+        formatterBuilder.appendPattern("yyyy-MM-dd HH:mm:ss");
+        formatterBuilder.appendFraction(ChronoField.MILLI_OF_SECOND, 0, 9, true);
+        DateTimeFormatter formatter = formatterBuilder.toFormatter();
+        return formatter;
+    }
+
     private final FastLogDateTimeParser fastDTParser;
 
     public static long timeInParseParamsFromDetail = 0;
@@ -296,8 +305,7 @@ public class PostgresLogFileParser implements LogFileParser {
         for (int i = 0; i < paramStrings.length; i++) {
             String paramString = paramStrings[i];
             char typeChar = typeChars[i];
-            // TODO: the formats of the strings in pg and replay file are different so I need to make a new function
-            params[i] = ReplayFileReader.stringToParam(paramString, typeChar);
+            params[i] = PostgresLogFileParser.logStringToParam(paramString, typeChar);
         }
         
         return params;
@@ -315,6 +323,12 @@ public class PostgresLogFileParser implements LogFileParser {
      * @pre This function assumes that all parameters in the detail string are listed in order ($1= comes before $2= as so on)
      */
     private static String[] extractParamStringsFromDetail(String detailString) {
+        // we do not consider the empty string to be an "invalid" SQL parameter detail string and
+        // thus we return String[0] instead of null
+        if (detailString == "") {
+            return new String[0];
+        }
+
         Pair<String, String> typeAndContent = PostgresLogFileParser.splitTypeAndContent(detailString);
         
         if (typeAndContent != null) {
@@ -348,6 +362,7 @@ public class PostgresLogFileParser implements LogFileParser {
             }
         }
 
+        assert false : String.format("failed to parse detailString \"%s\"", detailString);
         return null;
     }
 
@@ -379,11 +394,7 @@ public class PostgresLogFileParser implements LogFileParser {
 
         // Check if the string represents a timestamp
         try {
-            DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder();
-            formatterBuilder.appendPattern("yyyy-MM-dd HH:mm:ss");
-            formatterBuilder.appendFraction(ChronoField.MILLI_OF_SECOND, 0, 9, true);
-            DateTimeFormatter formatter = formatterBuilder.toFormatter();
-            LocalDateTime localDateTime = LocalDateTime.parse(paramString, formatter);
+            LocalDateTime localDateTime = LocalDateTime.parse(paramString, PostgresLogFileParser.TIMESTAMP_FORMATTER);
             Timestamp data = Timestamp.valueOf(localDateTime);
             return ReplayFileReader.getTypeCharOfObject(data);
         } catch (DateTimeParseException e) {
@@ -392,6 +403,36 @@ public class PostgresLogFileParser implements LogFileParser {
     
         // If all else fails, assume it's a string type
         return ReplayFileReader.getTypeCharOfObject(paramString);
+    }
+
+    /**
+     * @brief Convert a log file paramString to a param object
+     * @param paramString The param string
+     * @param typeChar The type of the param string
+     * @return The param object
+     */
+    public static Object logStringToParam(String paramString, char typeChar) {
+        switch (typeChar) {
+        case 'i':
+            return Long.parseLong(paramString);
+        case 'd':
+            return Double.parseDouble(paramString);
+        case 'v':
+            return paramString;
+        case 'b':
+            return Boolean.parseBoolean(paramString);
+        case 'D':
+            throw new RuntimeException("Unimplemented");
+        case 't':
+            throw new RuntimeException("Unimplemented");
+        case 'T':
+            LocalDateTime localDateTime = LocalDateTime.parse(paramString, PostgresLogFileParser.TIMESTAMP_FORMATTER);
+            Timestamp timestamp = Timestamp.valueOf(localDateTime);
+            return timestamp;
+        default:
+            assert false : String.format("Unknown typeChar (%c)", typeChar);
+            return null;
+        }
     }
 
     /**

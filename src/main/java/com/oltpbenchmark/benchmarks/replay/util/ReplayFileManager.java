@@ -98,7 +98,7 @@ public class ReplayFileManager {
             }
             loadReplayFile();
 
-            // throw new RuntimeException("early exit");
+            throw new RuntimeException("early exit");
         }
     }
 

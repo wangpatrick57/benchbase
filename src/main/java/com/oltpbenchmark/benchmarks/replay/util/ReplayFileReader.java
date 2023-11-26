@@ -139,7 +139,7 @@ public class ReplayFileReader implements AutoCloseable {
         String sqlStmtIDOrString = ReplayFileManager.charBufToString(cbuf, endOffsets[0] + 2, endOffsets[1] - 1);
         assert(cbuf[endOffsets[1] + 1] == '"' && cbuf[endOffsets[2] - 1] == '"');
         String paramsString = ReplayFileManager.charBufToString(cbuf, endOffsets[1] + 2, endOffsets[2] - 1);
-        Object[] params = ReplayFileReader.stringToParams(paramsString);
+        Object[] params = ReplayFileReader.replayStringToParams(paramsString);
         return new ReplayFileLine(logTime, sqlStmtIDOrString, params, endOffsets[2]);
     }
 
@@ -171,7 +171,7 @@ public class ReplayFileReader implements AutoCloseable {
         return null;
     }
 
-    private static String paramToString(Object param, char typeChar) {
+    private static String paramToReplayString(Object param, char typeChar) {
         switch (typeChar) {
         case 'i':
         case 'd':
@@ -190,7 +190,17 @@ public class ReplayFileReader implements AutoCloseable {
         }
     }
 
-    public static Object stringToParam(String paramString, char typeChar) {
+    /**
+     * @brief Convert a replay file paramString to a param object
+     * 
+     * Note that replay file paramStrings are formatted differently than log file paramStrings
+     * so it is important to not accidentally use this function to parse log files.
+     * 
+     * @param paramString The param string
+     * @param typeChar The type of the param string
+     * @return The param object
+     */
+    public static Object replayStringToParam(String paramString, char typeChar) {
         switch (typeChar) {
         case 'i':
             return Long.parseLong(paramString);
@@ -212,21 +222,21 @@ public class ReplayFileReader implements AutoCloseable {
         }
     }
 
-    public static String paramsToString(Object[] params) {
+    public static String paramsToReplayString(Object[] params) {
         StringBuilder sb = new StringBuilder();
 
         for (Object param : params) {
             char typeChar = getTypeCharOfObject(param);
             sb.append(typeChar);
             sb.append('\'');
-            sb.append(paramToString(param, typeChar));
+            sb.append(paramToReplayString(param, typeChar));
             sb.append('\'');
         }
 
         return sb.toString();
     }
 
-    private static Object[] stringToParams(String paramsString) {
+    public static Object[] replayStringToParams(String paramsString) {
         List<Object> params = new ArrayList<>();
         Character currTypeChar = null; // null is used to indicate errors
         StringBuilder currParamSB = new StringBuilder();
@@ -239,7 +249,7 @@ public class ReplayFileReader implements AutoCloseable {
                 if (c == '\'') {
                     String currParamString = currParamSB.toString();
                     assert currTypeChar != null : String.format("no type char for currParamString(%s)", currParamString);
-                    params.add(ReplayFileReader.stringToParam(currParamString, currTypeChar));
+                    params.add(ReplayFileReader.replayStringToParam(currParamString, currTypeChar));
                     currTypeChar = null;
                     currParamSB = new StringBuilder();
                     isInSingleQuotes = false;
