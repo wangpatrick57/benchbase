@@ -6,8 +6,6 @@ import java.lang.AutoCloseable;
 import java.util.ArrayList;
 import java.util.List;
 
-import java.sql.Types;
-
 /**
  * @brief A class similar in spirit to BufferedReader which exposes an API to read the next line of a replay file
  * @author phw2

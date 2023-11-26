@@ -51,7 +51,7 @@ public class PostgresLogFileParser implements LogFileParser {
 
     private final FastLogDateTimeParser fastDTParser;
 
-    public static long timeInParseParamsFromDetail = 0;
+    public static long timeSpentParsingParams = 0;
 
     /**
      * @brief Construct a PostgresLogFileParser instance
@@ -86,6 +86,7 @@ public class PostgresLogFileParser implements LogFileParser {
                 Queue<LogTransaction> logTransactionQueue = new LinkedList<>();
                 int nextSQLStmtID = 0;
                 Map<String, Integer> sqlStringIDs = new HashMap<>();
+                Map<Integer, char[]> sqlStmtTypeChars = new HashMap<>();
                 // Virtual Transaction IDs (VXIDs) vs Transaction IDs (XIDs)
                 // Source: PostgreSQL 10 High Performance -> Database Activity and Statistics -> Locks -> Virtual Transactions
                 //  - XIDs don't work because (1) XIDs aren't even assigned to read-only transactions and (2) the XID wraparound issue means different transactions active at the same time may have the same XID
@@ -108,30 +109,25 @@ public class PostgresLogFileParser implements LogFileParser {
                         continue;
                     }
                     String detailString = fields[PGLOG_DETAIL_INDEX];
-                    char[] typeChars = PostgresLogFileParser.guessTypeCharsFromDetail(detailString);
-                    Object[] params = PostgresLogFileParser.extractParamsFromDetail(detailString, typeChars);
-                    // it's possible for params to be null. we do this just to avoid crashing the program if this happens
-                    if (params == null) {
-                        LOG.warn("params was null. This indicates an error in parsing");
-                        params = new Object[0];
-                    }
                     String vxid = fields[PGLOG_VXID_INDEX];
 
                     // manage activeTransactions and logTransactionQueue based on what the line is
                     if (sqlString.equals(BEGIN_STRING)) {
+                        assert detailString == "" : String.format("detailString should be \"\" if sqlString == %s", BEGIN_STRING);
                         assert(!activeTransactions.containsKey(vxid));
                         LogTransaction newExplicitLogTransaction = new LogTransaction(true);
-                        newExplicitLogTransaction.addSQLStmtLine(sqlString, params, logTime);
+                        newExplicitLogTransaction.addSQLStmtLine(sqlString, new Object[0], logTime);
                         activeTransactions.put(vxid, newExplicitLogTransaction);
                         // in the output replay file, replay transactions are ordered by the time they first appear in the log file
                         logTransactionQueue.add(newExplicitLogTransaction);
                     } else if (sqlString.equals(COMMIT_STRING) || sqlString.equals(ROLLBACK_STRING)) {
+                        assert detailString == "" : String.format("detailString should be \"\" if sqlString is %s or %s", COMMIT_STRING, ROLLBACK_STRING);
                         LogTransaction explicitLogTransaction = activeTransactions.get(vxid);
                         // if the sqlString is ROLLBACK, it's actually possible for that to be the only statement for that vxid and thus for explicitLogTransaction to be null
                         // one way this can happen is if a txn deadlocks and thus gets aborted before it is able to execute any statements
                         assert sqlString.equals(ROLLBACK_STRING) || explicitLogTransaction != null : "It's only allowable for vxid to not be in activeTransactions if sqlString is ROLLBACK";
                         if (explicitLogTransaction != null) {
-                            explicitLogTransaction.addSQLStmtLine(sqlString, params, logTime);
+                            explicitLogTransaction.addSQLStmtLine(sqlString, new Object[0], logTime);
                             explicitLogTransaction.markComplete();
                             activeTransactions.remove(vxid);
                         }
@@ -141,6 +137,20 @@ public class PostgresLogFileParser implements LogFileParser {
                             sqlStmtID = nextSQLStmtID++;
                             sqlStringIDs.put(sqlString, sqlStmtID);
                         }
+
+                        long startTime = System.nanoTime();
+                        if (!sqlStmtTypeChars.containsKey(sqlStmtID)) {
+                            char[] typeChars = PostgresLogFileParser.guessTypeCharsFromDetail(detailString);
+                            sqlStmtTypeChars.put(sqlStmtID, typeChars);
+                        }
+                        char[] typeChars = sqlStmtTypeChars.get(sqlStmtID);
+                        Object[] params = PostgresLogFileParser.extractParamsFromDetail(detailString, typeChars);
+                        // it's possible for params to be null. we do this just to avoid crashing the program if this happens
+                        if (params == null) {
+                            LOG.warn("params was null. This indicates an error in parsing");
+                            params = new Object[0];
+                        }
+                        PostgresLogFileParser.timeSpentParsingParams += System.nanoTime() - startTime;
 
                         if (activeTransactions.containsKey(vxid)) {
                             // if it's in active transactions, it should be added to the corresponding explicit transaction
@@ -161,6 +171,7 @@ public class PostgresLogFileParser implements LogFileParser {
                 System.out.println(); // the progress bar doesn't have a newline at the end of it. this adds one
                 System.out.printf("convertLogFileToReplayFile: the whole loop took %.4fms\n", (double)(System.nanoTime() - loopOuterStartTime) / 1000000);
                 System.out.printf("convertLogFileToReplayFile: we spent %.4fms doing compute inside the loop\n", (double)totalInLoopComputeTime / 1000000);
+                System.out.printf("convertLogFileToReplayFile: we spent %.4fms parsing params\n", (double)PostgresLogFileParser.timeSpentParsingParams / 1000000);
 
                 // write all transactions at the end instead of inside the loop so that both the log file
                 // read and the replay file write can be sequential 
