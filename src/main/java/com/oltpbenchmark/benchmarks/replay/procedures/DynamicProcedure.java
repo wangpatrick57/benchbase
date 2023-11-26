@@ -81,7 +81,6 @@ public class DynamicProcedure extends Procedure {
             }
 
             SQLStmt sqlStmt = replayTransaction.peekSQLStmt();
-            sqlStmt = new SQLStmt("SELECT * FROM beaker WHERE volume_ml = ? AND rating = ?"); // PAT DEBUG
             Object[] params = replayTransaction.peekParams();
             // remove after peeking, even if the prepared statement is eventually not successful
             replayTransaction.removeSQLStmtCall();
